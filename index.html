@@ -256,7 +256,7 @@
 </head>
 <body>
 <canvas id="gameCanvas" tabindex="0"></canvas>
-<input id="kb-trap" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-hidden="true">
+<input id="kb-trap" type="text" readonly inputmode="none" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-hidden="true">
 
 <!-- Click-to-activate overlay for keyboard focus in iframes -->
 <div id="focus-overlay">
@@ -333,11 +333,16 @@ const justPressed = {};
 // Additionally, we forward any key events from the hidden input to our handler.
 const kbTrap = document.getElementById('kb-trap');
 
+const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 function grabFocus() {
   hasUserInteracted = true;
   // Try multiple focus targets — one of them will work in the iframe sandbox
   try { canvas.focus({ preventScroll: true }); } catch(e) {}
-  try { if (kbTrap) kbTrap.focus({ preventScroll: true }); } catch(e) {}
+  // Only focus the keyboard trap on non-touch devices (iPad with keyboard, laptops)
+  // On phones, this would open the virtual keyboard and block the game
+  if (!isTouchDevice || (window.innerWidth > 800)) {
+    try { if (kbTrap) kbTrap.focus({ preventScroll: true }); } catch(e) {}
+  }
   try { window.focus(); } catch(e) {}
 }
 
