@@ -1,0 +1,4234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--
+   ______                            __
+  / ____/___  ____ ___  ____  __  __/ /____  _____
+ / /   / __ \/ __ `__ \/ __ \/ / / / __/ _ \/ ___/
+/ /___/ /_/ / / / / / / /_/ / /_/ / /_/  __/ /
+\____/\____/_/ /_/ /_/ .___/\__,_/\__/\___/_/
+                    /_/
+        Created with Perplexity Computer
+        https://www.perplexity.ai/computer
+-->
+<meta name="generator" content="Perplexity Computer">
+<meta name="author" content="Perplexity Computer">
+<meta property="og:see_also" content="https://www.perplexity.ai/computer">
+<link rel="author" href="https://www.perplexity.ai/computer">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Mr Peabody's Healdsburg Crusade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #1a1a2e;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    overscroll-behavior: none;
+  }
+  canvas {
+    display: block; width: 100%; height: 100%;
+    image-rendering: auto;
+    touch-action: none;
+  }
+
+  /* ─── Mobile Touch Controls ─── */
+  #touch-controls {
+    display: none;
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 20;
+  }
+
+  .touch-btn {
+    position: absolute;
+    pointer-events: auto;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    color: rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.12);
+    border: 2px solid rgba(255,255,255,0.25);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    transition: background 0.08s, transform 0.08s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .touch-btn:active, .touch-btn.pressed {
+    background: rgba(255,255,255,0.3);
+    transform: scale(0.92);
+  }
+
+  /* D-Pad buttons — left side */
+  #btn-left {
+    bottom: 28px; left: 16px;
+    width: 72px; height: 72px;
+    font-size: 28px;
+  }
+  #btn-down {
+    bottom: 28px; left: 60px;
+    width: 72px; height: 72px;
+    font-size: 28px;
+  }
+  #btn-right {
+    bottom: 28px; left: 120px;
+    width: 72px; height: 72px;
+    font-size: 28px;
+  }
+
+  /* Action buttons — right side */
+  #btn-jump {
+    bottom: 100px; right: 16px;
+    width: 72px; height: 72px;
+    font-size: 14px;
+    background: rgba(100, 200, 255, 0.18);
+    border-color: rgba(100, 200, 255, 0.35);
+  }
+  #btn-jump:active, #btn-jump.pressed {
+    background: rgba(100, 200, 255, 0.4);
+  }
+
+  #btn-attack {
+    bottom: 20px; right: 100px;
+    width: 72px; height: 72px;
+    font-size: 14px;
+    background: rgba(255, 100, 100, 0.18);
+    border-color: rgba(255, 100, 100, 0.35);
+  }
+  #btn-attack:active, #btn-attack.pressed {
+    background: rgba(255, 100, 100, 0.4);
+  }
+
+  /* Safe area padding for notched phones */
+  @supports (padding: env(safe-area-inset-bottom)) {
+    #btn-left   { bottom: calc(28px + env(safe-area-inset-bottom)); left: calc(16px + env(safe-area-inset-left)); }
+    #btn-down   { bottom: calc(28px + env(safe-area-inset-bottom)); left: calc(60px + env(safe-area-inset-left)); }
+    #btn-right  { bottom: calc(28px + env(safe-area-inset-bottom)); left: calc(120px + env(safe-area-inset-left)); }
+    #btn-jump   { bottom: calc(100px + env(safe-area-inset-bottom)); right: calc(16px + env(safe-area-inset-right)); }
+    #btn-attack { bottom: calc(20px + env(safe-area-inset-bottom)); right: calc(100px + env(safe-area-inset-right)); }
+  }
+
+  /* Show touch controls only on touch devices */
+  @media (hover: none) and (pointer: coarse) {
+    #touch-controls { display: block; }
+  }
+
+  /* Rotate device prompt — portrait only on mobile */
+  #rotate-prompt {
+    display: none;
+    position: fixed; inset: 0;
+    z-index: 50;
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    text-align: center;
+    padding: 24px;
+  }
+  #rotate-prompt .rotate-icon {
+    width: 60px; height: 60px;
+    border: 3px solid rgba(255,255,255,0.4);
+    border-radius: 10px;
+    position: relative;
+    animation: rotateHint 2s ease-in-out infinite;
+  }
+  #rotate-prompt .rotate-icon::after {
+    content: '↻';
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; color: rgba(255,255,255,0.7);
+  }
+  @keyframes rotateHint {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(90deg); }
+  }
+  #rotate-prompt p {
+    font-size: 16px; font-weight: 600;
+    color: rgba(255,255,255,0.9);
+    max-width: 260px;
+    line-height: 1.4;
+  }
+  #rotate-prompt .dismiss-btn {
+    margin-top: 8px;
+    padding: 10px 28px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 24px;
+    color: rgba(255,255,255,0.7);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #rotate-prompt .dismiss-btn:active {
+    background: rgba(255,255,255,0.25);
+  }
+  @media (hover: none) and (pointer: coarse) and (orientation: portrait) {
+    #rotate-prompt { display: flex; }
+  }
+
+  /* Click-to-activate overlay for iframe keyboard focus */
+  #focus-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    flex-direction: column; gap: 12px;
+  }
+  #focus-overlay .prompt {
+    color: #fff; font-family: 'Bangers', cursive;
+    font-size: 42px; text-align: center;
+    text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  #focus-overlay .sub {
+    color: rgba(255,255,255,0.6); font-family: 'Inter', sans-serif;
+    font-size: 16px; text-align: center;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  /* Exit Shop button */
+  #exit-shop-btn {
+    display: none;
+    position: fixed;
+    top: 18px; right: 18px;
+    z-index: 30;
+    padding: 12px 28px;
+    background: rgba(180, 40, 40, 0.85);
+    border: 2px solid rgba(255, 100, 100, 0.6);
+    border-radius: 12px;
+    color: #fff;
+    font-family: 'Bangers', cursive;
+    font-size: 22px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    transition: background 0.12s, transform 0.12s;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #exit-shop-btn:hover {
+    background: rgba(220, 50, 50, 0.95);
+  }
+  #exit-shop-btn:active {
+    background: rgba(255, 60, 60, 1);
+    transform: scale(0.94);
+  }
+
+  /* Hidden input for reliable iframe keyboard capture */
+  #kb-trap {
+    position: fixed; left: -9999px; top: -9999px;
+    width: 1px; height: 1px;
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  footer {
+    position: fixed; bottom: 4px; right: 8px; z-index: 100;
+    font-size: 10px; opacity: 0.4; color: #fff;
+  }
+  footer a { color: inherit; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  @media (hover: none) and (pointer: coarse) {
+    footer { bottom: calc(4px + env(safe-area-inset-bottom, 0px)); }
+  }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas" tabindex="0"></canvas>
+<input id="kb-trap" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-hidden="true">
+
+<!-- Click-to-activate overlay for keyboard focus in iframes -->
+<div id="focus-overlay">
+  <div class="prompt">Click or Tap to Play</div>
+  <div class="sub">This enables keyboard controls</div>
+</div>
+
+<!-- Rotate device prompt -->
+<div id="rotate-prompt">
+  <div class="rotate-icon"></div>
+  <p>Rotate your device to landscape for the best experience</p>
+  <button class="dismiss-btn" onclick="this.parentElement.style.display='none'">Play Anyway</button>
+</div>
+
+<!-- On-screen touch controls -->
+<div id="touch-controls">
+  <div id="btn-left" class="touch-btn" data-action="left">&#9664;</div>
+  <div id="btn-down" class="touch-btn" data-action="down">&#9660;</div>
+  <div id="btn-right" class="touch-btn" data-action="right">&#9654;</div>
+  <div id="btn-jump" class="touch-btn" data-action="jump">JUMP</div>
+  <div id="btn-attack" class="touch-btn" data-action="attack">CHOP</div>
+</div>
+
+<!-- Exit Shop button (shown only when inside burger shop) -->
+<div id="exit-shop-btn">EXIT SHOP</div>
+
+<footer>
+  <a href="https://www.perplexity.ai/computer" target="_blank" rel="noopener noreferrer">Created with Perplexity Computer</a>
+</footer>
+
+<script>
+// ============================================================
+// MR PEABODY'S HEALDSBURG CRUSADE
+// A side-scrolling action game featuring a Chinese Crested dog
+// collecting watermelons & minnows, karate chopping cats & pigeons
+// Set in downtown Healdsburg, CA
+// ============================================================
+
+(function() {
+'use strict';
+
+// ─── CANVAS SETUP ───
+const canvas = document.getElementById('gameCanvas');
+canvas.setAttribute('tabindex', '0');
+canvas.style.outline = 'none';  // hide focus ring
+const ctx = canvas.getContext('2d');
+let W, H;
+const GAME_W = 1280;
+const GAME_H = 720;
+let scale = 1;
+let offsetX = 0, offsetY = 0;
+let hasUserInteracted = false;  // track if user has clicked/tapped to enable keyboard
+
+function resize() {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W;
+  canvas.height = H;
+  scale = Math.min(W / GAME_W, H / GAME_H);
+  offsetX = (W - GAME_W * scale) / 2;
+  offsetY = (H - GAME_H * scale) / 2;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ─── INPUT STATE (declared early so keyboard trap can reference them) ───
+const keys = {};
+const justPressed = {};
+
+// ─── IFRAME KEYBOARD FOCUS FIX ───
+// Strategy: use a hidden <input> as a keyboard trap. In cross-origin iframes,
+// <input> elements reliably capture keyboard focus (browsers allow this for
+// accessibility). We also bind keydown/keyup to document and window as fallbacks.
+// Additionally, we forward any key events from the hidden input to our handler.
+const kbTrap = document.getElementById('kb-trap');
+
+function grabFocus() {
+  hasUserInteracted = true;
+  // Try multiple focus targets — one of them will work in the iframe sandbox
+  try { canvas.focus({ preventScroll: true }); } catch(e) {}
+  try { if (kbTrap) kbTrap.focus({ preventScroll: true }); } catch(e) {}
+  try { window.focus(); } catch(e) {}
+}
+
+// Grab focus on any user interaction anywhere in the page
+['click', 'touchstart', 'mousedown', 'pointerdown'].forEach(evt => {
+  document.addEventListener(evt, grabFocus, true);
+});
+
+// Also listen for focus/blur on the window to re-grab focus
+window.addEventListener('focus', grabFocus);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) grabFocus();
+});
+
+// Bind keyboard events to the hidden input too
+if (kbTrap) {
+  kbTrap.addEventListener('keydown', function(e) {
+    // Prevent the input from actually receiving text
+    e.preventDefault();
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) {
+      e.preventDefault();
+    }
+    if (!keys[e.code]) justPressed[e.code] = true;
+    keys[e.code] = true;
+  });
+  kbTrap.addEventListener('keyup', function(e) {
+    e.preventDefault();
+    keys[e.code] = false;
+  });
+}
+
+// Auto-focus on load and with delays for slow iframe initialization
+grabFocus();
+setTimeout(grabFocus, 100);
+setTimeout(grabFocus, 300);
+setTimeout(grabFocus, 600);
+setTimeout(grabFocus, 1000);
+// Keep re-focusing periodically for the first few seconds
+let focusAttempts = 0;
+const focusInterval = setInterval(() => {
+  grabFocus();
+  focusAttempts++;
+  if (focusAttempts > 20) clearInterval(focusInterval);
+}, 500);
+
+// Dismiss the click-to-activate overlay on first interaction
+const focusOverlay = document.getElementById('focus-overlay');
+if (focusOverlay) {
+  function dismissOverlay(e) {
+    focusOverlay.style.display = 'none';
+    grabFocus();
+    initAudio();
+    focusOverlay.removeEventListener('click', dismissOverlay);
+    focusOverlay.removeEventListener('touchstart', dismissOverlay);
+    focusOverlay.removeEventListener('pointerdown', dismissOverlay);
+  }
+  focusOverlay.addEventListener('click', dismissOverlay);
+  focusOverlay.addEventListener('touchstart', dismissOverlay, { passive: false });
+  focusOverlay.addEventListener('pointerdown', dismissOverlay);
+}
+
+// ─── UTILITY ───
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const rand = (lo, hi) => Math.random() * (hi - lo) + lo;
+const randInt = (lo, hi) => Math.floor(rand(lo, hi + 1));
+const easeOutQuad = t => t * (2 - t);
+
+// ─── AUDIO (procedural SFX) ───
+let audioCtx;
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  audioCtx.resume();
+  updateMusic();
+}
+
+function playSFX(freq, dur, type = 'square', vol = 0.15) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + dur);
+}
+
+function playJump() { playSFX(400, 0.15, 'sine', 0.12); setTimeout(() => playSFX(600, 0.1, 'sine', 0.1), 50); }
+function playCollect() { playSFX(880, 0.1, 'sine', 0.15); setTimeout(() => playSFX(1100, 0.12, 'sine', 0.12), 60); }
+function playChop() { playSFX(200, 0.08, 'sawtooth', 0.2); playSFX(120, 0.12, 'square', 0.15); }
+function playHit() { playSFX(100, 0.2, 'sawtooth', 0.2); }
+function playGameOver() { playSFX(300, 0.3, 'sine', 0.15); setTimeout(() => playSFX(200, 0.4, 'sine', 0.12), 200); setTimeout(() => playSFX(100, 0.6, 'sine', 0.1), 400); }
+function playKickMode() { playSFX(500, 0.1, 'sine', 0.15); setTimeout(() => playSFX(700, 0.1, 'sine', 0.15), 80); setTimeout(() => playSFX(900, 0.15, 'sine', 0.12), 160); }
+function playChickenSpawn() { playSFX(600, 0.05, 'square', 0.12); setTimeout(() => playSFX(800, 0.05, 'square', 0.12), 60); setTimeout(() => playSFX(600, 0.05, 'square', 0.12), 120); setTimeout(() => playSFX(900, 0.08, 'square', 0.1), 180); }
+function playFart() { playSFX(80, 0.3, 'sawtooth', 0.2); playSFX(60, 0.4, 'square', 0.12); setTimeout(() => playSFX(50, 0.2, 'sawtooth', 0.15), 100); }
+function playNap() { playSFX(300, 0.2, 'sine', 0.08); setTimeout(() => playSFX(280, 0.3, 'sine', 0.06), 300); }
+function playPowerUp() { playSFX(440, 0.08, 'sine', 0.12); setTimeout(() => playSFX(660, 0.08, 'sine', 0.12), 80); setTimeout(() => playSFX(880, 0.12, 'sine', 0.1), 160); }
+function playBark() { playSFX(250, 0.12, 'square', 0.2); setTimeout(() => playSFX(350, 0.08, 'square', 0.18), 60); setTimeout(() => playSFX(200, 0.15, 'sawtooth', 0.15), 120); }
+function playPee() { playSFX(600, 0.3, 'sine', 0.08); playSFX(580, 0.35, 'sine', 0.06); }
+function playShopBuy() { playSFX(523, 0.08, 'sine', 0.12); setTimeout(() => playSFX(659, 0.08, 'sine', 0.12), 60); setTimeout(() => playSFX(784, 0.12, 'sine', 0.1), 120); }
+
+// ─── MUSIC SYSTEM (MP3 song) ───
+let musicPlaying = false;
+const bgMusic = new Audio('peabody-crusade.mp3');
+bgMusic.loop = true;
+bgMusic.volume = 0.35;
+
+function updateMusic() {
+  if (gameState === STATE.PLAYING || gameState === STATE.SHOP) {
+    if (!musicPlaying) {
+      bgMusic.play().catch(() => {});
+      musicPlaying = true;
+    }
+  } else {
+    if (musicPlaying) {
+      bgMusic.pause();
+      musicPlaying = false;
+    }
+  }
+}
+
+// ─── PAUSE MUSIC WHEN LEAVING / SWITCHING TABS ───
+window.addEventListener('blur', () => {
+  if (!bgMusic.paused) { bgMusic.pause(); musicPlaying = false; }
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (!bgMusic.paused) { bgMusic.pause(); musicPlaying = false; }
+  } else {
+    updateMusic();
+  }
+});
+window.addEventListener('pagehide', () => { bgMusic.pause(); });
+
+// ─── INPUT ───
+function onKeyDown(e) {
+  // Prevent arrow keys and space from scrolling the page
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) {
+    e.preventDefault();
+  }
+  if (!keys[e.code]) justPressed[e.code] = true;
+  keys[e.code] = true;
+}
+function onKeyUp(e) { keys[e.code] = false; }
+// Bind to canvas (primary — gets events when canvas has focus),
+// document, AND window for maximum compatibility across browsers/iframes
+canvas.addEventListener('keydown', onKeyDown);
+canvas.addEventListener('keyup', onKeyUp);
+document.addEventListener('keydown', onKeyDown);
+document.addEventListener('keyup', onKeyUp);
+window.addEventListener('keydown', onKeyDown);
+window.addEventListener('keyup', onKeyUp);
+function clearJustPressed() {
+  Object.keys(justPressed).forEach(k => delete justPressed[k]);
+  touchJumpJustPressed = false;
+  touchAttackJustPressed = false;
+  touchDownJustPressed = false;
+}
+
+// ─── TOUCH / MOBILE SUPPORT ───
+let isMobile = false;
+let touchAction = { left: false, right: false, jump: false, attack: false, down: false };
+let touchJumpJustPressed = false;
+let touchAttackJustPressed = false;
+let touchDownJustPressed = false;
+
+function detectMobile() {
+  isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0 ||
+    window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+}
+detectMobile();
+
+// Wire up the on-screen button controls
+function initTouchControls() {
+  const btnLeft = document.getElementById('btn-left');
+  const btnDown = document.getElementById('btn-down');
+  const btnRight = document.getElementById('btn-right');
+  const btnJump = document.getElementById('btn-jump');
+  const btnAttack = document.getElementById('btn-attack');
+
+  if (!btnLeft) return; // controls not in DOM
+
+  // Track which touches belong to which buttons
+  const activeTouches = new Map(); // touchId -> action
+
+  function actionFromEl(el) {
+    if (!el) return null;
+    const a = el.dataset ? el.dataset.action : null;
+    if (a) return a;
+    // Walk up for nested elements
+    if (el.parentElement && el.parentElement.dataset) return el.parentElement.dataset.action || null;
+    return null;
+  }
+
+  function updateState() {
+    touchAction.left = false;
+    touchAction.right = false;
+    touchAction.jump = false;
+    touchAction.attack = false;
+    touchAction.down = false;
+    for (const action of activeTouches.values()) {
+      touchAction[action] = true;
+    }
+  }
+
+  function setPressed(el, on) {
+    if (el) { if (on) el.classList.add('pressed'); else el.classList.remove('pressed'); }
+  }
+
+  const btnMap = { left: btnLeft, right: btnRight, jump: btnJump, attack: btnAttack, down: btnDown };
+
+  // Shared handler for the entire touch-controls container
+  const container = document.getElementById('touch-controls');
+
+  container.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    for (const touch of e.changedTouches) {
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const action = actionFromEl(el);
+      if (action) {
+        activeTouches.set(touch.identifier, action);
+        setPressed(btnMap[action], true);
+        if (action === 'jump') touchJumpJustPressed = true;
+        if (action === 'attack') touchAttackJustPressed = true;
+        if (action === 'down') touchDownJustPressed = true;
+      }
+    }
+    updateState();
+  }, { passive: false });
+
+  container.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    for (const touch of e.changedTouches) {
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const action = actionFromEl(el);
+      const prevAction = activeTouches.get(touch.identifier);
+      if (action !== prevAction) {
+        // Finger slid to a different button
+        if (prevAction) setPressed(btnMap[prevAction], false);
+        if (action) {
+          activeTouches.set(touch.identifier, action);
+          setPressed(btnMap[action], true);
+          if (action === 'jump') touchJumpJustPressed = true;
+          if (action === 'attack') touchAttackJustPressed = true;
+        } else {
+          activeTouches.delete(touch.identifier);
+        }
+      }
+    }
+    updateState();
+  }, { passive: false });
+
+  container.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    for (const touch of e.changedTouches) {
+      const action = activeTouches.get(touch.identifier);
+      if (action) setPressed(btnMap[action], false);
+      activeTouches.delete(touch.identifier);
+    }
+    updateState();
+  }, { passive: false });
+
+  container.addEventListener('touchcancel', (e) => {
+    for (const touch of e.changedTouches) {
+      const action = activeTouches.get(touch.identifier);
+      if (action) setPressed(btnMap[action], false);
+      activeTouches.delete(touch.identifier);
+    }
+    updateState();
+  }, { passive: false });
+}
+
+// Prevent default touch behaviors on the canvas (scroll, zoom, etc.)
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  initAudio();
+  // If on menu or game over, tapping the canvas starts/restarts
+  if (gameState === STATE.MENU || gameState === STATE.GAMEOVER) {
+    startGameRequested = true;
+  }
+}, { passive: false });
+canvas.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+
+// Initialize on load
+window.addEventListener('DOMContentLoaded', initTouchControls);
+// Also try immediately in case DOM is already ready
+if (document.readyState !== 'loading') initTouchControls();
+
+// Wire up the EXIT SHOP button
+(function() {
+  var exitBtn = document.getElementById('exit-shop-btn');
+  if (exitBtn) {
+    exitBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof leaveShop === 'function') leaveShop();
+    });
+    exitBtn.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof leaveShop === 'function') leaveShop();
+    }, { passive: false });
+  }
+})();
+
+// ─── GAME STATE ───
+const STATE = { MENU: 0, PLAYING: 1, GAMEOVER: 2, PAUSED: 3, SHOP: 4 };
+let gameState = STATE.MENU;
+let startGameRequested = false;
+let score = 0;
+let hiScore = 0;
+let lives = 3;
+let comboCount = 0;
+let comboTimer = 0;
+let invincibleTimer = 0;
+let screenShake = 0;
+let gameTime = 0;
+let difficulty = 1;
+
+// ─── POWER-UP STATE ───
+let stamina = 100;          // 0-100 strength bar
+const STAMINA_MAX = 100;
+let watermelonsEaten = 0;   // total watermelons eaten
+let jumpBoostLevel = 0;     // every 10 watermelons = +1 level
+let minnowsEaten = 0;       // total minnows eaten
+let speedBoostLevel = 0;    // every 10 minnows = +1 level (speed)
+let sizeBoostLevel = 0;     // alternating: even=speed, odd=size
+let catsKilled = 0;         // running cat kill count
+let kickModeTimer = 0;      // seconds remaining in kick mode
+const KICK_MODE_DURATION = 8;
+let pigeonsKilled = 0;      // running pigeon kill count
+let chicken = null;         // active chicken object or null
+let fartModeTimer = 0;      // seconds remaining in fart mode
+const FART_MODE_DURATION = 4;
+let fartClouds = [];        // visual fart particles
+let dogBeds = [];           // rest stops on platforms
+let isNapping = false;      // currently resting on a dog bed
+let napTimer = 0;           // how long been napping
+const NAP_DURATION = 2.0;   // seconds to fully restore
+let napBubble = 0;          // Z animation phase
+
+// ─── BURGER SHOP STATE ───
+let burgerShop = null;
+let minnowsSpent = 0;       // minnows spent in shop
+let hasFries = false;        // can bark at birds
+let friesTimer = 0;          // seconds remaining
+const FRIES_DURATION = 15;
+let hasBurger = false;       // can pee on stuff
+let burgerTimer = 0;
+const BURGER_DURATION = 20;
+let shakeSpeedTimer = 0;     // speed boost from shake
+const SHAKE_DURATION = 10;
+let shopCursor = 0;          // menu selection index
+let peePuddles = [];          // visual pee marks
+let barkWaves = [];           // visual bark wave circles
+
+// ─── FOXES (friendly, scare birds) ───
+let foxes = [];
+const FOX_COUNT = 8;
+
+// ─── RACCOONS (knock over trash cans) ───
+let raccoons = [];
+const RACCOON_COUNT = 10;
+
+// ─── TRASH CANS ───
+let trashCans = [];
+const TRASH_CAN_COUNT = 25;
+
+// ─── FLIGHT POWER (from eating trash food) ───
+let canFly = false;
+let flyTimer = 0;
+const FLY_DURATION = 30;
+
+// ─── CAMERA ───
+const camera = { x: 0, y: 0, smoothing: 0.08 };
+const WORLD_W = 24000;
+const GROUND_Y = GAME_H - 120;
+
+// ─── COLORS ───
+const SKY_TOP = '#87CEEB';
+const SKY_BOT = '#E8D5B7';
+const GROUND_COLOR = '#8B7355';
+const SIDEWALK_COLOR = '#D4C5A9';
+
+// ─── PARALLAX LAYERS ───
+// Background mountains/hills
+function drawMountains(scrollX) {
+  ctx.save();
+  const offset = scrollX * 0.05;
+  // Distant hills
+  ctx.fillStyle = '#7BA27E';
+  ctx.beginPath();
+  ctx.moveTo(-100, GROUND_Y - 180);
+  for (let x = -100; x < GAME_W + 200; x += 40) {
+    const baseY = GROUND_Y - 180;
+    const h = Math.sin((x + offset) * 0.003) * 60 + Math.sin((x + offset) * 0.007) * 30 + Math.cos((x + offset) * 0.002) * 40;
+    ctx.lineTo(x, baseY - h);
+  }
+  ctx.lineTo(GAME_W + 200, GROUND_Y);
+  ctx.lineTo(-100, GROUND_Y);
+  ctx.closePath();
+  ctx.fill();
+
+  // Vineyard rows on hills
+  ctx.strokeStyle = '#6B926E';
+  ctx.lineWidth = 1;
+  for (let row = 0; row < 5; row++) {
+    ctx.beginPath();
+    for (let x = -100; x < GAME_W + 200; x += 3) {
+      const baseY = GROUND_Y - 140 + row * 20;
+      const h = Math.sin((x + offset) * 0.003) * 40 + Math.sin((x + offset) * 0.007) * 20;
+      if (x === -100) ctx.moveTo(x, baseY - h);
+      else ctx.lineTo(x, baseY - h);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// Mid-distance trees
+function drawTreeLine(scrollX) {
+  ctx.save();
+  const offset = scrollX * 0.15;
+  const treePositions = [];
+  for (let i = 0; i < 30; i++) {
+    treePositions.push({
+      x: i * 90 + Math.sin(i * 2.3) * 30,
+      h: 60 + Math.sin(i * 1.7) * 25,
+      w: 35 + Math.sin(i * 3.1) * 10
+    });
+  }
+  for (const tree of treePositions) {
+    const screenX = ((tree.x - offset) % (30 * 90) + 30 * 90) % (30 * 90) - 100;
+    if (screenX < -60 || screenX > GAME_W + 60) continue;
+    // Trunk
+    ctx.fillStyle = '#5D4037';
+    ctx.fillRect(screenX - 4, GROUND_Y - 100 - tree.h * 0.3, 8, tree.h * 0.5);
+    // Canopy
+    ctx.fillStyle = '#4A7C4F';
+    ctx.beginPath();
+    ctx.ellipse(screenX, GROUND_Y - 100 - tree.h * 0.5, tree.w, tree.h * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#3D6B42';
+    ctx.beginPath();
+    ctx.ellipse(screenX - 8, GROUND_Y - 100 - tree.h * 0.6, tree.w * 0.7, tree.h * 0.45, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ─── HEALDSBURG BUILDINGS ───
+class Building {
+  constructor(x, type) {
+    this.x = x;
+    this.type = type;
+    this.w = 120 + randInt(0, 80);
+    this.floors = randInt(1, 3);
+    this.h = this.floors * 80 + 40;
+    this.color = this.pickColor();
+    this.trimColor = this.pickTrimColor();
+    this.roofStyle = randInt(0, 2); // 0=flat, 1=peaked, 2=awning
+    this.windows = [];
+    this.signText = this.pickSign();
+    this.hasAwning = Math.random() > 0.3;
+    this.awningColor = `hsl(${randInt(0, 360)}, ${randInt(20, 50)}%, ${randInt(40, 60)}%)`;
+    this.doorX = this.w * (0.3 + Math.random() * 0.4);
+    this.generateWindows();
+    this.applyShopStyle();
+  }
+
+  pickColor() {
+    const colors = [
+      '#E8DCC8', '#F5EDE0', '#D4C5A9', '#C9B99A',
+      '#E2D5C0', '#F0E6D3', '#D9CDB8', '#BFB398',
+      '#E5D8C4', '#FAEBD7', '#DDD0BC', '#C8BA9F',
+      '#F2E8D5', '#E0D4BF', '#CBB99C', '#D6C8AE',
+      '#FFF8EF', '#F5ECDC', '#EAE0CF', '#D8CCBA'
+    ];
+    return colors[randInt(0, colors.length - 1)];
+  }
+
+  pickTrimColor() {
+    const colors = ['#5D4037', '#3E2723', '#4E342E', '#6D4C41', '#795548', '#4A332A', '#2C1810'];
+    return colors[randInt(0, colors.length - 1)];
+  }
+
+  pickSign() {
+    const signs = [
+      'Costeaux Bakery', 'Oakville Grocery', 'SingleThread',
+      'Dry Creek Kitchen', 'Barndiva', 'Noble Folk',
+      'Flying Goat Coffee', 'Journeyman Meats', 'Plaza Gourmet',
+      "Mr. Moon's", 'Fideaux Pets', 'Running Company',
+      'The Matheson', 'Baci Cafe', 'Little Saint',
+      'Lime Stone', 'Punch', 'Gallery Lulo',
+      'Hotel Healdsburg', 'Spoke Folk Cyclery', 'Maison Fiori',
+      'Shed', 'Campo Fina', "Willi's Seafood", 'Bravas Tapas'
+    ];
+    return signs[randInt(0, signs.length - 1)];
+  }
+
+  applyShopStyle() {
+    const styles = {
+      'Costeaux Bakery': { color: '#F5EDE0', trim: '#8B6914', awning: '#C4A35A' },
+      'Oakville Grocery': { color: '#2E4A2E', trim: '#FFF8EF', awning: '#3D6B42' },
+      'SingleThread': { color: '#1C1C1C', trim: '#888', awning: '#333' },
+      'Dry Creek Kitchen': { color: '#D2B48C', trim: '#5D4037', awning: '#8B6914' },
+      'Barndiva': { color: '#8B2500', trim: '#FFD700', awning: '#A0522D' },
+      'Noble Folk': { color: '#FFE4E1', trim: '#FF69B4', awning: '#FFB6C1' },
+      'Flying Goat Coffee': { color: '#DEB887', trim: '#5D4037', awning: '#8B6914' },
+      'Journeyman Meats': { color: '#3E2723', trim: '#A0522D', awning: '#5D4037' },
+      'Plaza Gourmet': { color: '#FFF8EF', trim: '#01696F', awning: '#20808D' },
+      "Mr. Moon's": { color: '#6A5ACD', trim: '#FFD700', awning: '#9370DB' },
+      'Fideaux Pets': { color: '#4A8B3F', trim: '#FFF', awning: '#6DAA45' },
+      'Running Company': { color: '#FF4500', trim: '#FFF', awning: '#FF6347' },
+      'The Matheson': { color: '#2C2C2C', trim: '#C0C0C0', awning: '#444' },
+      'Baci Cafe': { color: '#E8D5C4', trim: '#8B0000', awning: '#CD853F' },
+      'Little Saint': { color: '#E8F5E9', trim: '#2E7D32', awning: '#4CAF50' },
+      'Lime Stone': { color: '#F5F5DC', trim: '#808080', awning: '#B8B8B8' },
+      'Punch': { color: '#FF1493', trim: '#FFF', awning: '#FF69B4' },
+      'Gallery Lulo': { color: '#F0F0F0', trim: '#333', awning: '#666' },
+      'Hotel Healdsburg': { color: '#E8DCC8', trim: '#5D4037', awning: '#D4C5A9' },
+      'Spoke Folk Cyclery': { color: '#4169E1', trim: '#FFF', awning: '#6495ED' },
+      'Maison Fiori': { color: '#FFF0F5', trim: '#FF69B4', awning: '#FFB6C1' },
+      'Shed': { color: '#A0522D', trim: '#DEB887', awning: '#CD853F' },
+      'Campo Fina': { color: '#E8D5C4', trim: '#8B0000', awning: '#B22222' },
+      "Willi's Seafood": { color: '#4682B4', trim: '#FFF', awning: '#5F9EA0' },
+      'Bravas Tapas': { color: '#FF6347', trim: '#FFD700', awning: '#FF4500' },
+    };
+    const style = styles[this.signText];
+    if (style) {
+      this.color = style.color;
+      this.trimColor = style.trim;
+      this.awningColor = style.awning;
+      this.hasAwning = true;
+    }
+  }
+
+  generateWindows() {
+    const cols = Math.floor((this.w - 30) / 35);
+    for (let floor = 0; floor < this.floors; floor++) {
+      for (let col = 0; col < cols; col++) {
+        this.windows.push({
+          x: 20 + col * 35 + (this.w - 20 - cols * 35) / 2,
+          y: this.h - 50 - floor * 80,
+          lit: Math.random() > 0.5
+        });
+      }
+    }
+  }
+
+  draw(ctx, camX) {
+    const sx = this.x - camX;
+    if (sx + this.w < -50 || sx > GAME_W + 50) return;
+    const baseY = GROUND_Y;
+
+    // Main building body
+    ctx.fillStyle = this.color;
+    ctx.fillRect(sx, baseY - this.h, this.w, this.h);
+
+    // Brick/stone texture lines
+    ctx.strokeStyle = 'rgba(0,0,0,0.04)';
+    ctx.lineWidth = 1;
+    for (let y = baseY - this.h; y < baseY; y += 12) {
+      ctx.beginPath();
+      ctx.moveTo(sx, y);
+      ctx.lineTo(sx + this.w, y);
+      ctx.stroke();
+    }
+
+    // Side borders / trim
+    ctx.fillStyle = this.trimColor;
+    ctx.fillRect(sx - 2, baseY - this.h - 8, this.w + 4, 12);
+    ctx.fillRect(sx - 2, baseY - this.h - 8, 6, this.h + 8);
+    ctx.fillRect(sx + this.w - 4, baseY - this.h - 8, 6, this.h + 8);
+
+    // Roof detail
+    if (this.roofStyle === 1) {
+      ctx.fillStyle = this.trimColor;
+      ctx.beginPath();
+      ctx.moveTo(sx - 4, baseY - this.h - 8);
+      ctx.lineTo(sx + this.w / 2, baseY - this.h - 35);
+      ctx.lineTo(sx + this.w + 4, baseY - this.h - 8);
+      ctx.closePath();
+      ctx.fill();
+    } else if (this.roofStyle === 2) {
+      // Cornice
+      ctx.fillStyle = this.trimColor;
+      ctx.fillRect(sx - 6, baseY - this.h - 15, this.w + 12, 18);
+      ctx.fillRect(sx - 4, baseY - this.h - 20, this.w + 8, 8);
+    }
+
+    // Windows
+    for (const win of this.windows) {
+      const wx = sx + win.x;
+      const wy = baseY - win.y;
+      // Window frame
+      ctx.fillStyle = this.trimColor;
+      ctx.fillRect(wx - 2, wy - 2, 24, 34);
+      // Glass
+      ctx.fillStyle = win.lit ? '#FFFDE7' : '#87CEEB';
+      ctx.globalAlpha = win.lit ? 0.8 : 0.5;
+      ctx.fillRect(wx, wy, 20, 30);
+      ctx.globalAlpha = 1;
+      // Pane dividers
+      ctx.strokeStyle = this.trimColor;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(wx + 10, wy);
+      ctx.lineTo(wx + 10, wy + 30);
+      ctx.moveTo(wx, wy + 15);
+      ctx.lineTo(wx + 20, wy + 15);
+      ctx.stroke();
+      // Sill
+      ctx.fillStyle = this.trimColor;
+      ctx.fillRect(wx - 3, wy + 30, 26, 4);
+    }
+
+    // Door
+    const dx = sx + this.doorX - 12;
+    ctx.fillStyle = this.trimColor;
+    ctx.fillRect(dx - 2, baseY - 55, 28, 55);
+    ctx.fillStyle = '#8D6E63';
+    ctx.fillRect(dx, baseY - 53, 24, 53);
+    // Doorknob
+    ctx.fillStyle = '#FFD700';
+    ctx.beginPath();
+    ctx.arc(dx + 19, baseY - 26, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Shop awning
+    if (this.hasAwning) {
+      ctx.fillStyle = this.awningColor;
+      ctx.beginPath();
+      ctx.moveTo(sx + 5, baseY - 60);
+      ctx.lineTo(sx + this.w - 5, baseY - 60);
+      ctx.lineTo(sx + this.w + 5, baseY - 42);
+      ctx.lineTo(sx - 5, baseY - 42);
+      ctx.closePath();
+      ctx.fill();
+      // Stripes
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 6; i++) {
+        const lx = sx + 10 + i * (this.w - 10) / 6;
+        ctx.beginPath();
+        ctx.moveTo(lx, baseY - 60);
+        ctx.lineTo(lx + 3, baseY - 42);
+        ctx.stroke();
+      }
+      // Scalloped edge
+      ctx.fillStyle = this.awningColor;
+      for (let i = 0; i < 8; i++) {
+        const cx = sx - 3 + i * (this.w + 8) / 8;
+        ctx.beginPath();
+        ctx.arc(cx + (this.w + 8) / 16, baseY - 40, 8, 0, Math.PI);
+        ctx.fill();
+      }
+    }
+
+    // Sign
+    if (this.signText) {
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillRect(sx + this.w * 0.15, baseY - this.h + 15, this.w * 0.7, 22);
+      ctx.font = '600 11px Inter, sans-serif';
+      ctx.fillStyle = '#FFD700';
+      // Use white text on dark buildings
+      if (['#2E4A2E','#1C1C1C','#3E2723','#2C2C2C','#8B2500','#4682B4','#4169E1','#6A5ACD','#4A8B3F','#FF4500','#FF1493'].includes(this.color)) {
+        ctx.fillStyle = '#FFFFFF';
+      }
+      ctx.textAlign = 'center';
+      ctx.fillText(this.signText.split('\n')[0], sx + this.w / 2, baseY - this.h + 32);
+      ctx.textAlign = 'left';
+    }
+  }
+}
+
+// ─── GENERATE WORLD ───
+let buildings = [];
+let platforms = [];
+let collectibles = [];
+let enemies = [];
+let particles = [];
+let floatingTexts = [];
+
+function generateWorld() {
+  buildings = [];
+  platforms = [];
+  collectibles = [];
+  enemies = [];
+  particles = [];
+  floatingTexts = [];
+
+  // Generate buildings along the street
+  let bx = 100;
+  while (bx < WORLD_W - 200) {
+    const b = new Building(bx, randInt(0, 4));
+    buildings.push(b);
+    bx += b.w + randInt(15, 40);
+  }
+
+  // Place burger shop further in so player has minnows to spend
+  const burgerShopX = 8000;
+  burgerShop = {
+    x: burgerShopX, y: GROUND_Y, w: 200, h: 200,
+    doorX: burgerShopX + 80, doorW: 40,
+    playerNear: false
+  };
+
+  // Generate platforms (awnings, ledges, crates)
+  dogBeds = [];
+  for (let i = 0; i < 120; i++) {
+    const px = 300 + i * 190 + randInt(-30, 30);
+    const py = GROUND_Y - randInt(100, 260);
+    const pw = randInt(60, 140);
+    platforms.push({ x: px, y: py, w: pw, h: 14, type: randInt(0, 2) });
+    // Every ~6th platform gets a dog bed
+    if (i % 6 === 3 && pw >= 80) {
+      dogBeds.push({ x: px + pw / 2 - 20, y: py, w: 40, h: 12, platformIdx: i });
+    }
+  }
+
+  // Generate collectibles — lots of ground-level ones so power-ups trigger fast
+  for (let i = 0; i < 360; i++) {
+    const cx = 200 + rand(0, WORLD_W - 400);
+    const onPlatform = Math.random() > 0.65; // 35% on platforms, 65% ground level
+    let cy;
+    if (onPlatform && platforms.length) {
+      const p = platforms[randInt(0, platforms.length - 1)];
+      cy = p.y - 30;
+      collectibles.push({ x: p.x + p.w / 2, y: cy, type: Math.random() > 0.5 ? 'watermelon' : 'minnow', collected: false, bobPhase: rand(0, Math.PI * 2) });
+    } else {
+      cy = GROUND_Y - 40;
+      collectibles.push({ x: cx, y: cy, type: Math.random() > 0.5 ? 'watermelon' : 'minnow', collected: false, bobPhase: rand(0, Math.PI * 2) });
+    }
+  }
+
+  // Reset chicken
+  chicken = null;
+  fartClouds = [];
+
+  // Generate enemies — plenty of cats and pigeons for power-up triggers
+  for (let i = 0; i < 140; i++) {
+    const ex = 400 + rand(0, WORLD_W - 500);
+    const type = Math.random() > 0.5 ? 'cat' : 'pigeon';
+    enemies.push({
+      x: ex, y: type === 'pigeon' ? GROUND_Y - 150 - rand(0, 100) : GROUND_Y,
+      type,
+      vx: type === 'pigeon' ? rand(-1, 1) : 0,
+      vy: 0,
+      alive: true,
+      hp: 1,
+      patrolDir: Math.random() > 0.5 ? 1 : -1,
+      patrolOrigin: ex,
+      patrolRange: rand(80, 200),
+      anim: 0,
+      flash: 0,
+      falling: false,
+      frozen: false,
+      frozenTimer: 0
+    });
+  }
+
+  // Generate foxes (friendly — chase pigeons)
+  foxes = [];
+  for (let i = 0; i < FOX_COUNT; i++) {
+    const fx = 600 + rand(0, WORLD_W - 800);
+    foxes.push({
+      x: fx, y: GROUND_Y,
+      vx: 0, facing: Math.random() > 0.5 ? 1 : -1,
+      state: 'idle', stateTimer: rand(1, 3),
+      target: null, anim: 0
+    });
+  }
+
+  // Generate raccoons (knock over trash cans)
+  raccoons = [];
+  for (let i = 0; i < RACCOON_COUNT; i++) {
+    const rx = 500 + rand(0, WORLD_W - 700);
+    raccoons.push({
+      x: rx, y: GROUND_Y,
+      vx: 0, facing: Math.random() > 0.5 ? 1 : -1,
+      state: 'wandering', stateTimer: rand(2, 5),
+      target: null, anim: 0
+    });
+  }
+
+  // Generate trash cans
+  trashCans = [];
+  for (let i = 0; i < TRASH_CAN_COUNT; i++) {
+    const tx = 400 + rand(0, WORLD_W - 600);
+    trashCans.push({
+      x: tx, y: GROUND_Y,
+      knocked: false, spilledFood: true,
+      foodEaten: false, foodX: tx + rand(-20, 20), foodY: GROUND_Y - 10
+    });
+  }
+}
+
+// ─── PLAYER ───
+const player = {
+  x: 200, y: GROUND_Y,
+  vx: 0, vy: 0,
+  w: 40, h: 56,
+  facing: 1,
+  grounded: false,
+  jumping: false,
+  attacking: false,
+  attackTimer: 0,
+  attackCooldown: 0,
+  anim: 0,
+  running: false,
+  // Hair animation
+  hairPhase: 0,
+  // Sprite drawing state
+  state: 'idle' // idle, run, jump, attack, hurt
+};
+
+const GRAVITY = 1800;
+const JUMP_VEL = -620;
+const RUN_SPEED = 340;
+const FRICTION = 0.88;
+const ATTACK_DURATION = 0.25;
+const ATTACK_COOLDOWN = 0.35;
+const ATTACK_RANGE = 55;
+
+// ─── PARTICLES ───
+class Particle {
+  constructor(x, y, vx, vy, color, size, life) {
+    this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+    this.color = color; this.size = size;
+    this.life = life; this.maxLife = life;
+    this.active = true;
+  }
+  update(dt) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.vy += 400 * dt;
+    this.life -= dt;
+    if (this.life <= 0) this.active = false;
+  }
+  draw(ctx, camX) {
+    const a = this.life / this.maxLife;
+    ctx.globalAlpha = a;
+    ctx.fillStyle = this.color;
+    const s = this.size * a;
+    ctx.fillRect(this.x - camX - s / 2, this.y - s / 2, s, s);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function spawnParticles(x, y, color, count, spread, speed) {
+  for (let i = 0; i < count; i++) {
+    particles.push(new Particle(
+      x, y,
+      (Math.random() - 0.5) * spread,
+      -Math.random() * speed - 50,
+      color,
+      rand(3, 8),
+      rand(0.3, 0.8)
+    ));
+  }
+}
+
+function addFloatingText(x, y, text, color) {
+  floatingTexts.push({ x, y, text, color, life: 1.0, vy: -80 });
+}
+
+// ─── DRAWING HELPERS ───
+
+function drawSky() {
+  const grad = ctx.createLinearGradient(0, 0, 0, GAME_H);
+  grad.addColorStop(0, SKY_TOP);
+  grad.addColorStop(0.7, SKY_BOT);
+  grad.addColorStop(1, '#C9A96E');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, GAME_W, GAME_H);
+
+  // Clouds
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  const cloudOff = camera.x * 0.02;
+  for (let i = 0; i < 8; i++) {
+    const cx = ((i * 300 + 100 - cloudOff) % (GAME_W + 400)) - 100;
+    const cy = 40 + Math.sin(i * 1.7) * 30;
+    drawCloud(cx, cy, 40 + i * 5);
+  }
+}
+
+function drawCloud(x, y, size) {
+  ctx.beginPath();
+  ctx.arc(x, y, size * 0.5, 0, Math.PI * 2);
+  ctx.arc(x + size * 0.3, y - size * 0.15, size * 0.4, 0, Math.PI * 2);
+  ctx.arc(x - size * 0.35, y + size * 0.05, size * 0.35, 0, Math.PI * 2);
+  ctx.arc(x + size * 0.15, y + size * 0.1, size * 0.3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawGround(camX) {
+  // Sidewalk
+  ctx.fillStyle = SIDEWALK_COLOR;
+  ctx.fillRect(0, GROUND_Y, GAME_W, 30);
+
+  // Sidewalk lines
+  ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+  ctx.lineWidth = 1;
+  const startTile = Math.floor(camX / 60) * 60;
+  for (let tx = startTile; tx < camX + GAME_W + 60; tx += 60) {
+    const sx = tx - camX;
+    ctx.beginPath();
+    ctx.moveTo(sx, GROUND_Y);
+    ctx.lineTo(sx, GROUND_Y + 30);
+    ctx.stroke();
+  }
+
+  // Road
+  ctx.fillStyle = '#555555';
+  ctx.fillRect(0, GROUND_Y + 30, GAME_W, 50);
+
+  // Road center line
+  ctx.strokeStyle = '#FFD700';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([20, 15]);
+  ctx.beginPath();
+  ctx.moveTo(0, GROUND_Y + 55);
+  ctx.lineTo(GAME_W, GROUND_Y + 55);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Curb
+  ctx.fillStyle = '#999';
+  ctx.fillRect(0, GROUND_Y + 28, GAME_W, 4);
+
+  // Grass/plants along sidewalk
+  ctx.fillStyle = GROUND_COLOR;
+  ctx.fillRect(0, GROUND_Y + 80, GAME_W, GAME_H - GROUND_Y - 80);
+}
+
+// Draw street lamps
+function drawStreetLamps(camX) {
+  const startLamp = Math.floor(camX / 250) * 250;
+  for (let lx = startLamp; lx < camX + GAME_W + 250; lx += 250) {
+    const sx = lx - camX;
+    // Pole
+    ctx.fillStyle = '#2C2C2C';
+    ctx.fillRect(sx - 3, GROUND_Y - 140, 6, 140);
+    // Arm
+    ctx.fillRect(sx - 20, GROUND_Y - 142, 40, 6);
+    // Lamp housing
+    ctx.fillStyle = '#333';
+    ctx.fillRect(sx - 12, GROUND_Y - 155, 24, 15);
+    // Light glow
+    ctx.fillStyle = 'rgba(255, 230, 150, 0.15)';
+    ctx.beginPath();
+    ctx.moveTo(sx - 30, GROUND_Y - 140);
+    ctx.lineTo(sx + 30, GROUND_Y - 140);
+    ctx.lineTo(sx + 60, GROUND_Y);
+    ctx.lineTo(sx - 60, GROUND_Y);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+// Draw plaza gazebo (special landmark)
+function drawGazebo(camX) {
+  const gx = 3000 - camX;
+  if (gx < -200 || gx > GAME_W + 200) return;
+  const gy = GROUND_Y;
+
+  // Base platform
+  ctx.fillStyle = '#C8B99A';
+  ctx.fillRect(gx - 60, gy - 8, 120, 8);
+
+  // Posts
+  ctx.fillStyle = '#F5F5F5';
+  for (let i = 0; i < 4; i++) {
+    const px = gx - 45 + i * 30;
+    ctx.fillRect(px - 3, gy - 80, 6, 72);
+  }
+
+  // Roof
+  ctx.fillStyle = '#8B4513';
+  ctx.beginPath();
+  ctx.moveTo(gx - 70, gy - 78);
+  ctx.lineTo(gx, gy - 120);
+  ctx.lineTo(gx + 70, gy - 78);
+  ctx.closePath();
+  ctx.fill();
+
+  // Finial
+  ctx.fillStyle = '#FFD700';
+  ctx.beginPath();
+  ctx.arc(gx, gy - 122, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Railing
+  ctx.strokeStyle = '#F5F5F5';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(gx - 45, gy - 25);
+  ctx.lineTo(gx + 45, gy - 25);
+  ctx.stroke();
+}
+
+// ─── DRAW BURGER SHOP EXTERIOR ───
+function drawBurgerShop(camX, time) {
+  if (!burgerShop) return;
+  const sx = burgerShop.x - camX;
+  if (sx + burgerShop.w < -50 || sx > GAME_W + 50) return;
+  const baseY = GROUND_Y;
+
+  // Main building
+  ctx.fillStyle = '#B71C1C';
+  ctx.fillRect(sx, baseY - burgerShop.h, burgerShop.w, burgerShop.h);
+
+  // Yellow accent stripe
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(sx, baseY - burgerShop.h, burgerShop.w, 15);
+  ctx.fillRect(sx, baseY - 70, burgerShop.w, 8);
+
+  // Brick texture
+  ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+  ctx.lineWidth = 1;
+  for (let y = baseY - burgerShop.h + 15; y < baseY; y += 14) {
+    ctx.beginPath();
+    ctx.moveTo(sx, y);
+    ctx.lineTo(sx + burgerShop.w, y);
+    ctx.stroke();
+  }
+
+  // Door (warm glow)
+  const doorSX = burgerShop.doorX - camX;
+  ctx.fillStyle = '#2C1810';
+  ctx.fillRect(doorSX - 2, baseY - 58, burgerShop.doorW + 4, 58);
+  // Interior glow
+  const glowAlpha = 0.5 + Math.sin(time * 2) * 0.15;
+  ctx.fillStyle = `rgba(255,200,100,${glowAlpha})`;
+  ctx.fillRect(doorSX, baseY - 56, burgerShop.doorW, 56);
+
+  // Windows on either side of door
+  for (let i = 0; i < 2; i++) {
+    const wx = sx + 20 + i * 130;
+    ctx.fillStyle = '#2C1810';
+    ctx.fillRect(wx - 2, baseY - 140, 44, 54);
+    ctx.fillStyle = `rgba(255,220,140,${0.6 + Math.sin(time * 1.5 + i) * 0.1})`;
+    ctx.fillRect(wx, baseY - 138, 40, 50);
+    // Pane divider
+    ctx.strokeStyle = '#2C1810';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(wx + 20, baseY - 138);
+    ctx.lineTo(wx + 20, baseY - 88);
+    ctx.stroke();
+  }
+
+  // Neon "BURGERS" sign on top
+  ctx.save();
+  const neonGlow = 0.8 + Math.sin(time * 4) * 0.2;
+  ctx.shadowColor = '#FF4444';
+  ctx.shadowBlur = 15 * neonGlow;
+  ctx.font = 'bold 20px Bangers, cursive';
+  ctx.fillStyle = `rgba(255,68,68,${neonGlow})`;
+  ctx.textAlign = 'center';
+  ctx.fillText("IGGY'S BURGERS", sx + burgerShop.w / 2, baseY - burgerShop.h - 10);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  // Burger icon on sign
+  ctx.font = '24px sans-serif';
+  ctx.fillText('\uD83C\uDF54', sx + burgerShop.w / 2 - 58, baseY - burgerShop.h - 4);
+  ctx.fillText('\uD83C\uDF54', sx + burgerShop.w / 2 + 42, baseY - burgerShop.h - 4);
+  ctx.textAlign = 'left';
+
+  // Awning
+  ctx.fillStyle = '#FFD700';
+  ctx.beginPath();
+  ctx.moveTo(sx - 5, baseY - 60);
+  ctx.lineTo(sx + burgerShop.w + 5, baseY - 60);
+  ctx.lineTo(sx + burgerShop.w + 10, baseY - 45);
+  ctx.lineTo(sx - 10, baseY - 45);
+  ctx.closePath();
+  ctx.fill();
+  // Red stripes on awning
+  ctx.fillStyle = '#B71C1C';
+  for (let i = 0; i < 8; i++) {
+    const lx = sx - 3 + i * (burgerShop.w + 8) / 8;
+    ctx.fillRect(lx, baseY - 60, 12, 15);
+  }
+
+  // Always show "OPEN" sign with animated glow (visible from distance)
+  ctx.save();
+  const openPulse = 0.7 + Math.sin(time * 3) * 0.3;
+  ctx.shadowColor = '#00FF00';
+  ctx.shadowBlur = 12 * openPulse;
+  ctx.font = 'bold 16px Bangers, cursive';
+  ctx.fillStyle = `rgba(0,255,80,${openPulse})`;
+  ctx.textAlign = 'center';
+  ctx.fillText('\u2B50 OPEN \u2B50', sx + burgerShop.w / 2, baseY - burgerShop.h - 28);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  // Animated bouncing arrow always pointing at door
+  const arrowBounce = Math.sin(time * 4) * 6;
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 26px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('\u2B07', doorSX + burgerShop.doorW / 2, baseY - 68 + arrowBounce);
+
+  // "ENTER" prompt when player is near — bigger and more obvious
+  if (burgerShop.playerNear) {
+    const bounce = Math.sin(time * 5) * 4;
+    ctx.save();
+    ctx.shadowColor = '#FFD700';
+    ctx.shadowBlur = 10;
+    ctx.font = 'bold 20px Bangers, cursive';
+    ctx.fillStyle = '#FFD700';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u2191 PRESS UP TO ENTER \u2191', sx + burgerShop.w / 2, baseY - burgerShop.h - 48 + bounce);
+    ctx.shadowBlur = 0;
+    ctx.restore();
+    // Glowing doorframe
+    ctx.save();
+    ctx.strokeStyle = `rgba(255,215,0,${0.6 + Math.sin(time * 6) * 0.4})`;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = '#FFD700';
+    ctx.shadowBlur = 15;
+    ctx.strokeRect(doorSX - 3, baseY - 60, burgerShop.doorW + 6, 60);
+    ctx.restore();
+  }
+  ctx.textAlign = 'left';
+}
+
+// ─── DRAW SHOP INTERIOR (top-down view) ───
+function drawShopInterior(time) {
+  // Checkered floor
+  for (let row = 0; row < 18; row++) {
+    for (let col = 0; col < 32; col++) {
+      ctx.fillStyle = (row + col) % 2 === 0 ? '#E8D5C4' : '#D4B896';
+      ctx.fillRect(col * 40, row * 40, 40, 40);
+    }
+  }
+
+  // Counter at top
+  ctx.fillStyle = '#8B4513';
+  ctx.fillRect(100, 80, GAME_W - 200, 60);
+  ctx.fillStyle = '#A0522D';
+  ctx.fillRect(100, 75, GAME_W - 200, 10);
+
+  // Chef - white hat
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(GAME_W / 2 - 20, 30, 40, 30);
+  ctx.fillRect(GAME_W / 2 - 25, 55, 50, 5);
+  // Face
+  ctx.fillStyle = '#DEB887';
+  ctx.fillRect(GAME_W / 2 - 15, 60, 30, 25);
+  // Eyes
+  ctx.fillStyle = '#000';
+  ctx.fillRect(GAME_W / 2 - 8, 68, 4, 4);
+  ctx.fillRect(GAME_W / 2 + 4, 68, 4, 4);
+  // Smile
+  ctx.fillRect(GAME_W / 2 - 5, 78, 10, 2);
+
+  // Menu board
+  ctx.fillStyle = '#2C1810';
+  ctx.fillRect(200, 180, GAME_W - 400, 320);
+  ctx.strokeStyle = '#8B4513';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(200, 180, GAME_W - 400, 320);
+
+  // Title
+  ctx.font = 'bold 36px Bangers, cursive';
+  ctx.fillStyle = '#FFD700';
+  ctx.textAlign = 'center';
+  ctx.fillText("IGGY'S BURGERS", GAME_W / 2, 225);
+
+  const items = [
+    { name: '\uD83C\uDF5F FRIES', cost: 10, desc: 'Bark at birds to scare them!', color: '#FFD700' },
+    { name: '\uD83C\uDF54 BURGER', cost: 20, desc: 'Pee on stuff to damage enemies!', color: '#FF8C00' },
+    { name: '\uD83E\uDD64 SHAKE', cost: 0, desc: 'Free speed boost!', color: '#FF69B4' }
+  ];
+
+  const availableMinnows = minnowsEaten - minnowsSpent;
+
+  items.forEach(function(item, i) {
+    const y = 270 + i * 70;
+    const selected = shopCursor === i;
+
+    if (selected) {
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      ctx.fillRect(220, y - 25, GAME_W - 440, 60);
+      const bounce = Math.sin(time * 5) * 5;
+      ctx.fillStyle = '#FFD700';
+      ctx.font = 'bold 24px Inter, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('\u25B8', 230 + bounce, y + 8);
+    }
+
+    ctx.font = 'bold 28px Inter, sans-serif';
+    ctx.fillStyle = item.color;
+    ctx.textAlign = 'left';
+    ctx.fillText(item.name, 270, y + 5);
+
+    ctx.font = '600 20px Inter, sans-serif';
+    ctx.fillStyle = availableMinnows >= item.cost ? '#4CAF50' : '#F44336';
+    ctx.textAlign = 'right';
+    var costText = item.cost === 0 ? 'FREE' : item.cost + ' \uD83D\uDC1F';
+    ctx.fillText(costText, GAME_W - 240, y + 5);
+
+    ctx.font = '400 16px Inter, sans-serif';
+    ctx.fillStyle = '#ccc';
+    ctx.textAlign = 'left';
+    ctx.fillText(item.desc, 270, y + 28);
+  });
+
+  // Minnow balance
+  ctx.font = 'bold 22px Inter, sans-serif';
+  ctx.fillStyle = '#42A5F5';
+  ctx.textAlign = 'center';
+  ctx.fillText('Your Minnows: ' + availableMinnows + ' \uD83D\uDC1F', GAME_W / 2, 540);
+
+  // Instructions
+  ctx.font = '500 16px Inter, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fillText('\u2191\u2193 to choose  \u2022  SPACE to buy  \u2022  \u2190 or button to leave', GAME_W / 2, 580);
+
+  // Dog in the shop
+  ctx.save();
+  ctx.translate(GAME_W / 2, 650);
+  ctx.scale(0.6, 0.6);
+  ctx.fillStyle = '#555';
+  ctx.fillRect(-15, -30, 30, 20);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(-10, -45, 20, 20);
+  ctx.fillStyle = '#FFB6C1';
+  ctx.fillRect(-15, -50, 8, 12);
+  ctx.fillRect(7, -50, 8, 12);
+  ctx.restore();
+
+  ctx.textAlign = 'left';
+}
+
+// ─── UPDATE SHOP ───
+function updateShop() {
+  if (justPressed['ArrowUp'] || justPressed['KeyW'] || touchJumpJustPressed) {
+    shopCursor = (shopCursor + 2) % 3;
+    playSFX(400, 0.05, 'square', 0.08);
+  }
+  if (justPressed['ArrowDown'] || justPressed['KeyS'] || touchDownJustPressed) {
+    shopCursor = (shopCursor + 1) % 3;
+    playSFX(400, 0.05, 'square', 0.08);
+  }
+  if (justPressed['Space'] || justPressed['Enter'] || touchAttackJustPressed) {
+    var availableMinnows = minnowsEaten - minnowsSpent;
+    if (shopCursor === 0 && availableMinnows >= 10) {
+      minnowsSpent += 10;
+      hasFries = true;
+      friesTimer = FRIES_DURATION;
+      playPowerUp();
+      addFloatingText(player.x, player.y - 50, 'GOT FRIES! BARK AT BIRDS!', '#FFD700');
+    } else if (shopCursor === 1 && availableMinnows >= 20) {
+      minnowsSpent += 20;
+      hasBurger = true;
+      burgerTimer = BURGER_DURATION;
+      playPowerUp();
+      addFloatingText(player.x, player.y - 50, 'GOT BURGER! PEE POWER!', '#FF8C00');
+    } else if (shopCursor === 2) {
+      shakeSpeedTimer = SHAKE_DURATION;
+      playPowerUp();
+      addFloatingText(player.x, player.y - 50, 'SHAKE SPEED BOOST!', '#FF69B4');
+    } else {
+      playSFX(100, 0.2, 'sawtooth', 0.1);
+    }
+  }
+  if (justPressed['ArrowLeft'] || justPressed['KeyA'] || justPressed['Backspace']) {
+    leaveShop();
+  }
+}
+
+function leaveShop() {
+  gameState = STATE.PLAYING;
+  var exitBtn = document.getElementById('exit-shop-btn');
+  if (exitBtn) exitBtn.style.display = 'none';
+}
+
+// Draw trees along the street
+function drawStreetTrees(camX) {
+  const startTree = Math.floor(camX / 350) * 350 + 175;
+  for (let tx = startTree; tx < camX + GAME_W + 350; tx += 350) {
+    const sx = tx - camX;
+    // Trunk
+    ctx.fillStyle = '#5D4037';
+    ctx.fillRect(sx - 5, GROUND_Y - 90, 10, 90);
+    // Canopy
+    ctx.fillStyle = '#2E7D32';
+    ctx.beginPath();
+    ctx.arc(sx, GROUND_Y - 100, 35, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#388E3C';
+    ctx.beginPath();
+    ctx.arc(sx - 15, GROUND_Y - 115, 25, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#1B5E20';
+    ctx.beginPath();
+    ctx.arc(sx + 12, GROUND_Y - 108, 22, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawPlatform(p, camX) {
+  const sx = p.x - camX;
+  if (sx + p.w < -20 || sx > GAME_W + 20) return;
+
+  if (p.type === 0) {
+    // Wooden crate platform
+    ctx.fillStyle = '#A0522D';
+    ctx.fillRect(sx, p.y, p.w, p.h);
+    ctx.strokeStyle = '#7B3F00';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sx, p.y, p.w, p.h);
+    for (let cx = 0; cx < p.w; cx += 20) {
+      ctx.beginPath();
+      ctx.moveTo(sx + cx, p.y);
+      ctx.lineTo(sx + cx, p.y + p.h);
+      ctx.stroke();
+    }
+  } else if (p.type === 1) {
+    // Stone ledge
+    ctx.fillStyle = '#9E9E9E';
+    ctx.fillRect(sx, p.y, p.w, p.h);
+    ctx.fillStyle = '#BDBDBD';
+    ctx.fillRect(sx, p.y, p.w, 4);
+    ctx.fillStyle = '#757575';
+    ctx.fillRect(sx, p.y + p.h - 3, p.w, 3);
+  } else {
+    // Awning platform
+    ctx.fillStyle = '#B71C1C';
+    ctx.fillRect(sx, p.y, p.w, p.h);
+    ctx.fillStyle = '#D32F2F';
+    ctx.fillRect(sx, p.y, p.w, 5);
+    // Stripes
+    ctx.fillStyle = '#FFCDD2';
+    for (let i = 0; i < p.w; i += 16) {
+      ctx.fillRect(sx + i, p.y, 8, p.h);
+    }
+  }
+}
+
+// ─── DRAW PLAYER (Chinese Crested Dog) ───
+function drawPlayer(camX, time) {
+  const p = player;
+  const sx = p.x - camX;
+  const sy = p.y;
+
+  // Size scaling from minnow size boost
+  const sizeScale = 1 + sizeBoostLevel * 0.08;
+
+  ctx.save();
+  ctx.translate(sx, sy);
+  if (p.facing < 0) {
+    ctx.scale(-1, 1);
+  }
+  ctx.scale(sizeScale, sizeScale);
+
+  // Invincibility flash
+  if (invincibleTimer > 0 && Math.sin(invincibleTimer * 20) > 0) {
+    ctx.globalAlpha = 0.5;
+  }
+
+  const bobY = p.grounded && p.running ? Math.sin(p.anim * 12) * 3 : 0;
+  const legPhase = p.running ? p.anim * 10 : 0;
+
+  // ─── KICK MODE: full upright stance on hind legs ───
+  if (kickModeTimer > 0) {
+    const walkCycle = p.running ? Math.sin(p.anim * 8) * 4 : 0;
+    const swayY = Math.sin(time * 4) * 2; // subtle body sway
+    const hairWaveK = Math.sin(time * 3 + p.hairPhase) * 5;
+    const windOffsetK = p.running ? -p.facing * 6 : 0;
+
+    // Glowing orange aura
+    const auraPulse = 0.12 + Math.sin(time * 6) * 0.06;
+    ctx.fillStyle = `rgba(255, 87, 34, ${auraPulse})`;
+    ctx.beginPath();
+    ctx.arc(0, -45 + swayY, 45, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = `rgba(255, 140, 0, ${auraPulse * 0.5})`;
+    ctx.beginPath();
+    ctx.arc(0, -45 + swayY, 55, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Shadow (wider for upright stance)
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 14, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hind legs (standing straight, on the ground)
+    ctx.fillStyle = '#4A4A4A';
+    ctx.fillRect(-8, -18, 6, 20 + walkCycle);
+    ctx.fillRect(2, -18, 6, 20 - walkCycle);
+    // Hind paw tufts
+    ctx.fillStyle = '#E8E0D0';
+    ctx.beginPath();
+    ctx.ellipse(-5, 2 + Math.max(0, walkCycle * 0.3), 5, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(5, 2 - Math.max(0, walkCycle * 0.3), 5, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Upright torso (vertical ellipse)
+    ctx.fillStyle = '#4A4A4A';
+    ctx.beginPath();
+    ctx.ellipse(0, -42 + swayY, 14, 24, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Chest fur / belly marking
+    ctx.fillStyle = '#F5F0E8';
+    ctx.beginPath();
+    ctx.ellipse(2, -34 + swayY, 8, 14, 0.1, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Tail (sticks out behind, upward)
+    ctx.strokeStyle = '#E8E0D0';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    const tailWagK = Math.sin(time * 8) * 8;
+    ctx.moveTo(-12, -35 + swayY);
+    ctx.quadraticCurveTo(-28, -45 + swayY + tailWagK, -22, -55 + swayY + tailWagK * 0.5);
+    ctx.stroke();
+    ctx.fillStyle = '#F5F0E8';
+    ctx.beginPath();
+    ctx.ellipse(-22, -55 + swayY + tailWagK * 0.5, 5, 3, tailWagK * 0.02, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Arms (front legs now used as arms) — guard stance
+    ctx.fillStyle = '#4A4A4A';
+    if (p.attacking) {
+      // Kick attack: one arm up in guard, one leg kicks forward
+      const kickProgress = 1 - (p.attackTimer / ATTACK_DURATION);
+      const kickAngle = Math.sin(kickProgress * Math.PI) * 1.5;
+
+      // Left arm up in guard
+      ctx.save();
+      ctx.translate(-10, -52 + swayY);
+      ctx.rotate(-0.8);
+      ctx.fillStyle = '#4A4A4A';
+      ctx.fillRect(0, -2, 16, 5);
+      ctx.fillStyle = '#E8E0D0';
+      ctx.beginPath();
+      ctx.ellipse(18, 0, 4, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Right arm punching forward
+      ctx.save();
+      ctx.translate(10, -50 + swayY);
+      ctx.rotate(-0.3 + kickAngle * 0.3);
+      ctx.fillStyle = '#4A4A4A';
+      ctx.fillRect(0, -2, 18, 5);
+      ctx.fillStyle = '#E8E0D0';
+      ctx.beginPath();
+      ctx.ellipse(20, 0, 4, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Kicking leg extends forward
+      ctx.save();
+      ctx.translate(4, -20 + swayY);
+      ctx.rotate(-kickAngle + 0.3);
+      ctx.fillStyle = '#4A4A4A';
+      ctx.fillRect(0, -3, 32, 6);
+      ctx.fillStyle = '#F5F0E8';
+      ctx.beginPath();
+      ctx.ellipse(34, 0, 6, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Kick impact lines
+      ctx.strokeStyle = 'rgba(255, 87, 34, 0.7)';
+      ctx.lineWidth = 2;
+      const kickExtend = Math.sin(kickProgress * Math.PI);
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(25 + kickExtend * 20, -18 + swayY - i * 4);
+        ctx.lineTo(35 + kickExtend * 25 + i * 4, -22 + swayY - i * 5);
+        ctx.stroke();
+      }
+    } else {
+      // Idle fighting stance: arms up like a boxer
+      const guardBob = Math.sin(time * 5) * 2;
+      // Left arm
+      ctx.save();
+      ctx.translate(-10, -50 + swayY + guardBob);
+      ctx.rotate(-0.6);
+      ctx.fillStyle = '#4A4A4A';
+      ctx.fillRect(0, -2, 16, 5);
+      ctx.fillStyle = '#E8E0D0';
+      ctx.beginPath();
+      ctx.ellipse(18, 0, 4, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      // Right arm
+      ctx.save();
+      ctx.translate(10, -48 + swayY - guardBob);
+      ctx.rotate(0.4);
+      ctx.fillStyle = '#4A4A4A';
+      ctx.fillRect(0, -2, 18, 5);
+      ctx.fillStyle = '#E8E0D0';
+      ctx.beginPath();
+      ctx.ellipse(20, 0, 4, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Neck (shorter, more vertical)
+    ctx.fillStyle = '#4A4A4A';
+    ctx.fillRect(-3, -70 + swayY, 8, 10);
+
+    // Head (positioned on top of upright body)
+    ctx.fillStyle = '#555';
+    ctx.beginPath();
+    ctx.ellipse(2, -78 + swayY, 11, 9, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Snout
+    ctx.fillStyle = '#666';
+    ctx.beginPath();
+    ctx.ellipse(12, -75 + swayY, 6, 4.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Nose
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.arc(16, -75 + swayY, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    // Tongue (when attacking)
+    if (p.attacking) {
+      ctx.fillStyle = '#FF6B8A';
+      ctx.beginPath();
+      ctx.ellipse(18, -72 + swayY, 3, 4, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Eyes (fierce)
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(6, -80 + swayY, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFF';
+    ctx.beginPath();
+    ctx.arc(7, -81 + swayY, 1, 0, Math.PI * 2);
+    ctx.fill();
+    // Angry eyebrow
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(3, -84 + swayY);
+    ctx.lineTo(9, -83 + swayY);
+    ctx.stroke();
+
+    // Ears
+    ctx.fillStyle = '#555';
+    ctx.beginPath();
+    ctx.moveTo(-4, -82 + swayY);
+    ctx.lineTo(-8, -100 + swayY);
+    ctx.lineTo(3, -85 + swayY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(6, -84 + swayY);
+    ctx.lineTo(12, -102 + swayY);
+    ctx.lineTo(14, -85 + swayY);
+    ctx.closePath();
+    ctx.fill();
+    // Inner ears
+    ctx.fillStyle = '#FF9FAD';
+    ctx.beginPath();
+    ctx.moveTo(-3, -83 + swayY);
+    ctx.lineTo(-5, -96 + swayY);
+    ctx.lineTo(2, -85 + swayY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(7, -85 + swayY);
+    ctx.lineTo(12, -98 + swayY);
+    ctx.lineTo(13, -85 + swayY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Hair/crest (flowing from top of head)
+    ctx.fillStyle = '#F5F0E8';
+    ctx.beginPath();
+    ctx.moveTo(-5, -86 + swayY);
+    ctx.quadraticCurveTo(-14 + hairWaveK + windOffsetK, -94 + swayY, -18 + windOffsetK, -88 + swayY + hairWaveK);
+    ctx.quadraticCurveTo(-20 + windOffsetK, -80 + swayY + hairWaveK, -14 + windOffsetK, -74 + swayY);
+    ctx.quadraticCurveTo(-8 + windOffsetK, -78 + swayY, -2, -78 + swayY);
+    ctx.closePath();
+    ctx.fill();
+    // Flowing strands
+    ctx.strokeStyle = '#F5F0E8';
+    ctx.lineWidth = 2.5;
+    for (let i = 0; i < 4; i++) {
+      const stX = -4 + i * 3;
+      const stY = -84 + swayY + i * 2;
+      const wv = Math.sin(time * 3 + i * 0.7) * (3 + i * 2);
+      ctx.beginPath();
+      ctx.moveTo(stX, stY);
+      ctx.quadraticCurveTo(stX - 8 + windOffsetK + wv, stY + 6, stX - 12 + windOffsetK + wv * 1.5, stY + 12 + i * 3);
+      ctx.stroke();
+    }
+
+    // "KICK MODE" headband
+    ctx.fillStyle = 'rgba(255, 87, 34, 0.9)';
+    ctx.fillRect(-12, -82 + swayY, 26, 3);
+    // Headband tails flowing behind
+    ctx.strokeStyle = 'rgba(255, 87, 34, 0.8)';
+    ctx.lineWidth = 2.5;
+    const hbWave = Math.sin(time * 5) * 6;
+    ctx.beginPath();
+    ctx.moveTo(-12, -81 + swayY);
+    ctx.quadraticCurveTo(-22 + windOffsetK, -78 + swayY + hbWave, -28 + windOffsetK, -74 + swayY + hbWave * 0.7);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-12, -80 + swayY);
+    ctx.quadraticCurveTo(-20 + windOffsetK, -76 + swayY + hbWave * 0.8, -25 + windOffsetK, -70 + swayY + hbWave * 0.5);
+    ctx.stroke();
+
+  } else {
+  // ─── NORMAL quadruped stance ───
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 20, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Body (dark grayish skin)
+  ctx.fillStyle = '#4A4A4A';
+  ctx.beginPath();
+  ctx.ellipse(0, -28 + bobY, 18, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Legs
+  const legColors = '#4A4A4A';
+  ctx.fillStyle = legColors;
+  // Back legs
+  const bl1 = Math.sin(legPhase) * 8;
+  const bl2 = Math.sin(legPhase + Math.PI) * 8;
+  ctx.fillRect(-12, -16 + bobY, 5, 18 + bl1);
+  ctx.fillRect(-4, -16 + bobY, 5, 18 + bl2);
+  // Front legs
+  ctx.fillRect(5, -16 + bobY, 5, 18 + bl2);
+  ctx.fillRect(13, -16 + bobY, 5, 18 + bl1);
+
+  // Leg fur tufts (white puffs at feet)
+  ctx.fillStyle = '#E8E0D0';
+  for (const lx of [-10, -2, 7, 15]) {
+    const legOff = (lx < 0 ? bl1 : bl2);
+    ctx.beginPath();
+    ctx.ellipse(lx + 2, 2 + bobY + Math.max(0, legOff * 0.5), 5, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Tail (with flowing fur)
+  ctx.strokeStyle = '#E8E0D0';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  const tailWag = Math.sin(time * 6) * 10;
+  ctx.moveTo(-16, -30 + bobY);
+  ctx.quadraticCurveTo(-25, -45 + bobY + tailWag, -20, -55 + bobY + tailWag * 0.5);
+  ctx.stroke();
+  // Tail fur tuft
+  ctx.fillStyle = '#F5F0E8';
+  ctx.beginPath();
+  ctx.ellipse(-20, -55 + bobY + tailWag * 0.5, 6, 4, tailWag * 0.02, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Neck
+  ctx.fillStyle = '#4A4A4A';
+  ctx.fillRect(10, -38 + bobY, 8, 12);
+
+  // Head
+  ctx.fillStyle = '#555';
+  ctx.beginPath();
+  ctx.ellipse(16, -44 + bobY, 12, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Snout
+  ctx.fillStyle = '#666';
+  ctx.beginPath();
+  ctx.ellipse(26, -40 + bobY, 7, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Nose
+  ctx.fillStyle = '#222';
+  ctx.beginPath();
+  ctx.arc(31, -40 + bobY, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  // Tongue (when attacking)
+  if (p.attacking) {
+    ctx.fillStyle = '#FF6B8A';
+    ctx.beginPath();
+    ctx.ellipse(33, -37 + bobY, 3, 4, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Eyes
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.arc(20, -46 + bobY, 3, 0, Math.PI * 2);
+  ctx.fill();
+  // Eye shine
+  ctx.fillStyle = '#FFF';
+  ctx.beginPath();
+  ctx.arc(21, -47 + bobY, 1, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Ears (big, upright)
+  ctx.fillStyle = '#555';
+  ctx.beginPath();
+  ctx.moveTo(10, -48 + bobY);
+  ctx.lineTo(5, -68 + bobY);
+  ctx.lineTo(16, -52 + bobY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(20, -50 + bobY);
+  ctx.lineTo(24, -70 + bobY);
+  ctx.lineTo(28, -52 + bobY);
+  ctx.closePath();
+  ctx.fill();
+
+  // Inner ears
+  ctx.fillStyle = '#FF9FAD';
+  ctx.beginPath();
+  ctx.moveTo(11, -49 + bobY);
+  ctx.lineTo(8, -63 + bobY);
+  ctx.lineTo(15, -51 + bobY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(21, -51 + bobY);
+  ctx.lineTo(24, -65 + bobY);
+  ctx.lineTo(27, -52 + bobY);
+  ctx.closePath();
+  ctx.fill();
+
+  // Hair/crest (flowing white mane) — the signature look!
+  ctx.fillStyle = '#F5F0E8';
+  const hairWave = Math.sin(time * 3 + p.hairPhase) * 5;
+  const windOffset = p.running ? -p.facing * 8 : 0;
+
+  // Main crest flowing from top of head
+  ctx.beginPath();
+  ctx.moveTo(8, -52 + bobY);
+  ctx.quadraticCurveTo(0 + hairWave + windOffset, -60 + bobY, -5 + windOffset, -55 + bobY + hairWave);
+  ctx.quadraticCurveTo(-10 + windOffset, -48 + bobY + hairWave, -8 + windOffset, -40 + bobY);
+  ctx.quadraticCurveTo(-5 + windOffset, -45 + bobY, 5, -44 + bobY);
+  ctx.closePath();
+  ctx.fill();
+
+  // Long flowing hair strands
+  ctx.strokeStyle = '#F5F0E8';
+  ctx.lineWidth = 2.5;
+  for (let i = 0; i < 5; i++) {
+    const startX = 6 + i * 4;
+    const startY = -50 + bobY + i * 2;
+    const wave = Math.sin(time * 3 + i * 0.7) * (4 + i * 2);
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.quadraticCurveTo(
+      startX - 10 + windOffset + wave,
+      startY + 8,
+      startX - 15 + windOffset + wave * 1.5,
+      startY + 15 + i * 3
+    );
+    ctx.stroke();
+  }
+
+  // Chest fur / beard
+  ctx.fillStyle = '#F5F0E8';
+  ctx.beginPath();
+  ctx.moveTo(14, -34 + bobY);
+  ctx.quadraticCurveTo(20, -24 + bobY, 16 + hairWave * 0.5, -15 + bobY);
+  ctx.quadraticCurveTo(10, -18 + bobY, 8, -30 + bobY);
+  ctx.closePath();
+  ctx.fill();
+
+  // Karate chop attack animation
+  if (p.attacking) {
+    const attackProgress = 1 - (p.attackTimer / ATTACK_DURATION);
+    const chopAngle = Math.sin(attackProgress * Math.PI) * 1.2;
+
+    ctx.save();
+    ctx.translate(18, -28 + bobY);
+    ctx.rotate(-chopAngle);
+
+    // Extended paw
+    ctx.fillStyle = '#4A4A4A';
+    ctx.fillRect(0, -3, 30, 6);
+    // Paw tuft
+    ctx.fillStyle = '#F5F0E8';
+    ctx.beginPath();
+    ctx.ellipse(32, 0, 6, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Action lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(25, -8 - i * 4);
+      ctx.lineTo(35 + i * 5, -12 - i * 5);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  } // end normal stance
+
+  // Fart mode: green stink aura
+  if (fartModeTimer > 0) {
+    ctx.fillStyle = 'rgba(124, 179, 66, 0.2)';
+    ctx.beginPath();
+    ctx.arc(0, -25 + bobY, 40, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Flight wings (golden translucent wings with flap animation)
+  if (canFly && flyTimer > 0) {
+    const flapAngle = Math.sin(time * 10) * 0.4;
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = '#FFD700';
+
+    // Left wing
+    ctx.save();
+    ctx.translate(-5, -32 + bobY);
+    ctx.rotate(-0.8 + flapAngle);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(-25, -20, -35, -5);
+    ctx.quadraticCurveTo(-25, 5, 0, 0);
+    ctx.fill();
+    ctx.restore();
+
+    // Right wing
+    ctx.save();
+    ctx.translate(5, -32 + bobY);
+    ctx.rotate(0.8 - flapAngle);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(25, -20, 35, -5);
+    ctx.quadraticCurveTo(25, 5, 0, 0);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// ─── DRAW COLLECTIBLES ───
+function drawWatermelon(x, y, camX, time, phase) {
+  const sx = x - camX;
+  const bob = Math.sin(time * 3 + phase) * 4;
+  const yy = y + bob;
+
+  // Glow
+  ctx.fillStyle = 'rgba(0, 255, 100, 0.1)';
+  ctx.beginPath();
+  ctx.arc(sx, yy, 18, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Whole watermelon
+  ctx.fillStyle = '#2E7D32';
+  ctx.beginPath();
+  ctx.ellipse(sx, yy, 14, 11, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Stripes
+  ctx.strokeStyle = '#1B5E20';
+  ctx.lineWidth = 1.5;
+  for (let i = -2; i <= 2; i++) {
+    ctx.beginPath();
+    ctx.moveTo(sx + i * 5, yy - 10);
+    ctx.quadraticCurveTo(sx + i * 6, yy, sx + i * 5, yy + 10);
+    ctx.stroke();
+  }
+
+  // Highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.beginPath();
+  ctx.ellipse(sx - 4, yy - 4, 6, 4, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawMinnow(x, y, camX, time, phase) {
+  const sx = x - camX;
+  const bob = Math.sin(time * 4 + phase) * 5;
+  const wiggle = Math.sin(time * 8 + phase) * 3;
+  const yy = y + bob;
+
+  // Sparkle
+  ctx.fillStyle = 'rgba(100, 200, 255, 0.15)';
+  ctx.beginPath();
+  ctx.arc(sx, yy, 16, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.save();
+  ctx.translate(sx, yy);
+  ctx.rotate(wiggle * 0.05);
+
+  // Body
+  ctx.fillStyle = '#90CAF9';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 12, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Tail
+  ctx.fillStyle = '#64B5F6';
+  ctx.beginPath();
+  ctx.moveTo(-10, 0);
+  ctx.lineTo(-18, -6 + wiggle * 0.5);
+  ctx.lineTo(-18, 6 + wiggle * 0.5);
+  ctx.closePath();
+  ctx.fill();
+
+  // Eye
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.arc(7, -1, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Silver shine
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.beginPath();
+  ctx.ellipse(0, -2, 8, 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// ─── DRAW ENEMIES ───
+function drawCat(enemy, camX, time) {
+  const sx = enemy.x - camX;
+  const sy = enemy.y;
+  if (sx < -60 || sx > GAME_W + 60) return;
+
+  ctx.save();
+  ctx.translate(sx, sy);
+  if (enemy.patrolDir < 0) ctx.scale(-1, 1);
+
+  if (enemy.flash > 0) {
+    ctx.globalAlpha = 0.5 + Math.sin(enemy.flash * 20) * 0.3;
+  }
+
+  const walk = Math.sin(time * 5 + enemy.anim) * 4;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 16, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Body
+  ctx.fillStyle = '#FF8A00';
+  ctx.beginPath();
+  ctx.ellipse(0, -18, 14, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Legs
+  ctx.fillStyle = '#E67300';
+  ctx.fillRect(-10, -10, 4, 12 + walk);
+  ctx.fillRect(-3, -10, 4, 12 - walk);
+  ctx.fillRect(3, -10, 4, 12 + walk);
+  ctx.fillRect(9, -10, 4, 12 - walk);
+
+  // Tail
+  ctx.strokeStyle = '#FF8A00';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(-12, -22);
+  ctx.quadraticCurveTo(-22, -35 + Math.sin(time * 4) * 5, -18, -40);
+  ctx.stroke();
+
+  // Head
+  ctx.fillStyle = '#FF9800';
+  ctx.beginPath();
+  ctx.arc(12, -26, 9, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Ears
+  ctx.fillStyle = '#FF8A00';
+  ctx.beginPath();
+  ctx.moveTo(7, -30); ctx.lineTo(5, -40); ctx.lineTo(12, -33);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(15, -30); ctx.lineTo(18, -40); ctx.lineTo(20, -33);
+  ctx.closePath(); ctx.fill();
+
+  // Inner ears
+  ctx.fillStyle = '#FFB74D';
+  ctx.beginPath();
+  ctx.moveTo(8, -31); ctx.lineTo(7, -37); ctx.lineTo(11, -33);
+  ctx.closePath(); ctx.fill();
+
+  // Eyes (angry)
+  ctx.fillStyle = '#FFEB3B';
+  ctx.beginPath();
+  ctx.ellipse(10, -27, 2.5, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.ellipse(10, -27, 1, 2.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Mouth
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(17, -23);
+  ctx.lineTo(19, -22);
+  ctx.lineTo(17, -21);
+  ctx.stroke();
+
+  // Whiskers
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+  ctx.lineWidth = 0.5;
+  for (let w = 0; w < 3; w++) {
+    ctx.beginPath();
+    ctx.moveTo(18, -24 + w * 2);
+    ctx.lineTo(28, -26 + w * 3);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawPigeon(enemy, camX, time) {
+  const sx = enemy.x - camX;
+  const sy = enemy.y;
+  if (sx < -60 || sx > GAME_W + 60) return;
+
+  ctx.save();
+  ctx.translate(sx, sy);
+  if (enemy.vx > 0) ctx.scale(-1, 1);
+
+  if (enemy.flash > 0) {
+    ctx.globalAlpha = 0.5 + Math.sin(enemy.flash * 20) * 0.3;
+  }
+
+  const flapSpeed = enemy.alive ? 8 : 2;
+  const wingUp = Math.sin(time * flapSpeed + enemy.anim) * 12;
+
+  // Body
+  ctx.fillStyle = '#78909C';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 12, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Chest
+  ctx.fillStyle = '#9C27B0';
+  ctx.beginPath();
+  ctx.ellipse(5, 2, 6, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#4CAF50';
+  ctx.globalAlpha = enemy.flash > 0 ? 0.3 : 0.4;
+  ctx.beginPath();
+  ctx.ellipse(5, 0, 5, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = enemy.flash > 0 ? 0.5 + Math.sin(enemy.flash * 20) * 0.3 : 1;
+
+  // Wings
+  ctx.fillStyle = '#607D8B';
+  ctx.beginPath();
+  ctx.moveTo(-5, -3);
+  ctx.quadraticCurveTo(-20, -15 + wingUp, -15, 5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(5, -3);
+  ctx.quadraticCurveTo(20, -15 + wingUp, 15, 5);
+  ctx.closePath();
+  ctx.fill();
+
+  // Head
+  ctx.fillStyle = '#607D8B';
+  ctx.beginPath();
+  ctx.arc(10, -6, 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eye
+  ctx.fillStyle = '#FF5722';
+  ctx.beginPath();
+  ctx.arc(12, -7, 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.arc(12, -7, 1, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Beak
+  ctx.fillStyle = '#FFA000';
+  ctx.beginPath();
+  ctx.moveTo(15, -5);
+  ctx.lineTo(20, -4);
+  ctx.lineTo(15, -3);
+  ctx.closePath();
+  ctx.fill();
+
+  // Tail
+  ctx.fillStyle = '#546E7A';
+  ctx.beginPath();
+  ctx.moveTo(-10, 2);
+  ctx.lineTo(-20, 5);
+  ctx.lineTo(-18, -2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// ─── DRAW DOG BED ───
+function drawDogBed(bed, camX, time) {
+  const sx = bed.x - camX;
+  if (sx + bed.w < -20 || sx > GAME_W + 20) return;
+
+  // Bed base (cozy oval)
+  ctx.fillStyle = '#8D6E63';
+  ctx.beginPath();
+  ctx.ellipse(sx + bed.w / 2, bed.y - 2, bed.w / 2 + 4, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cushion
+  ctx.fillStyle = '#FFAB91';
+  ctx.beginPath();
+  ctx.ellipse(sx + bed.w / 2, bed.y - 4, bed.w / 2, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Pillow bump
+  ctx.fillStyle = '#FF8A65';
+  ctx.beginPath();
+  ctx.ellipse(sx + bed.w / 2 - 10, bed.y - 6, 10, 5, -0.2, 0, 0 + Math.PI);
+  ctx.fill();
+
+  // "ZZZ" icon floating above if player is napping here
+  if (isNapping) {
+    const nearBed = Math.abs(player.x - (bed.x + bed.w / 2)) < 30;
+    if (nearBed) {
+      ctx.font = '700 14px Inter, sans-serif';
+      ctx.fillStyle = '#9C27B0';
+      ctx.globalAlpha = 0.6 + Math.sin(napBubble) * 0.3;
+      ctx.fillText('Z', sx + bed.w / 2 - 5, bed.y - 20 - Math.sin(napBubble * 1.2) * 5);
+      ctx.font = '700 18px Inter, sans-serif';
+      ctx.fillText('Z', sx + bed.w / 2 + 5, bed.y - 30 - Math.sin(napBubble * 0.8) * 8);
+      ctx.font = '700 22px Inter, sans-serif';
+      ctx.fillText('Z', sx + bed.w / 2 + 15, bed.y - 42 - Math.sin(napBubble * 0.5) * 10);
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+
+// ─── DRAW CHICKEN ───
+function drawChicken(camX, time) {
+  if (!chicken || chicken.caught) return;
+  const sx = chicken.x - camX;
+  if (sx < -60 || sx > GAME_W + 60) return;
+
+  ctx.save();
+  ctx.translate(sx, chicken.y);
+  if (chicken.runDir < 0) ctx.scale(-1, 1);
+
+  const walk = chicken.grounded ? Math.sin(time * 12) * 4 : 0;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 14, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Body
+  ctx.fillStyle = '#F5F5F5';
+  ctx.beginPath();
+  ctx.ellipse(0, -15, 12, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Wing
+  ctx.fillStyle = '#E0E0E0';
+  ctx.beginPath();
+  ctx.ellipse(-5, -14, 8, 6, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Legs
+  ctx.strokeStyle = '#FF8F00';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-4, -6);
+  ctx.lineTo(-6, 0 + walk);
+  ctx.moveTo(4, -6);
+  ctx.lineTo(6, 0 - walk);
+  ctx.stroke();
+
+  // Head
+  ctx.fillStyle = '#F5F5F5';
+  ctx.beginPath();
+  ctx.arc(10, -22, 7, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Comb (red)
+  ctx.fillStyle = '#F44336';
+  ctx.beginPath();
+  ctx.arc(10, -29, 4, 0, Math.PI, true);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(13, -29, 3, 0, Math.PI, true);
+  ctx.fill();
+
+  // Beak
+  ctx.fillStyle = '#FF8F00';
+  ctx.beginPath();
+  ctx.moveTo(15, -21);
+  ctx.lineTo(20, -20);
+  ctx.lineTo(15, -19);
+  ctx.closePath();
+  ctx.fill();
+
+  // Wattle
+  ctx.fillStyle = '#F44336';
+  ctx.beginPath();
+  ctx.ellipse(14, -17, 2, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eye
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.arc(12, -23, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Tail feathers
+  ctx.fillStyle = '#BDBDBD';
+  ctx.beginPath();
+  ctx.moveTo(-10, -18);
+  ctx.lineTo(-20, -28);
+  ctx.lineTo(-16, -14);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#E0E0E0';
+  ctx.beginPath();
+  ctx.moveTo(-10, -16);
+  ctx.lineTo(-22, -24);
+  ctx.lineTo(-14, -12);
+  ctx.closePath();
+  ctx.fill();
+
+  // Exclamation mark above (catch me!)
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 16px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  const bounce = Math.sin(time * 6) * 3;
+  ctx.fillText('!', 0, -38 + bounce);
+  ctx.textAlign = 'left';
+
+  ctx.restore();
+}
+
+// ─── DRAW FART CLOUDS ───
+function drawFartClouds(camX) {
+  for (const fc of fartClouds) {
+    const sx = fc.x - camX;
+    const alpha = (fc.life / fc.maxLife) * 0.5;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#7CB342';
+    ctx.beginPath();
+    ctx.arc(sx, fc.y, fc.size, 0, Math.PI * 2);
+    ctx.fill();
+    // Inner lighter cloud
+    ctx.fillStyle = '#AED581';
+    ctx.beginPath();
+    ctx.arc(sx + 2, fc.y - 2, fc.size * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ─── DRAW FOX ───
+function drawFox(fox, camX, time) {
+  const sx = fox.x - camX;
+  if (sx < -60 || sx > GAME_W + 60) return;
+  ctx.save();
+  ctx.translate(sx, fox.y);
+  if (fox.facing < 0) ctx.scale(-1, 1);
+
+  const legPhase = fox.vx !== 0 ? Math.sin(time * 10 + fox.anim) * 5 : 0;
+
+  // Legs (4 legs, dark orange)
+  ctx.fillStyle = '#B5600A';
+  // Back legs
+  ctx.fillRect(-12, -12, 4, 12 + legPhase);
+  ctx.fillRect(-5, -12, 4, 12 - legPhase);
+  // Front legs
+  ctx.fillRect(6, -12, 4, 12 - legPhase);
+  ctx.fillRect(13, -12, 4, 12 + legPhase);
+
+  // Body (rounded ellipse)
+  ctx.fillStyle = '#E87E04';
+  ctx.beginPath();
+  ctx.ellipse(0, -22, 20, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Belly
+  ctx.fillStyle = '#F5C56A';
+  ctx.beginPath();
+  ctx.ellipse(2, -18, 12, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Tail (bushy, curving upward)
+  ctx.fillStyle = '#E87E04';
+  const tailWag = Math.sin(time * 4 + fox.anim) * 8;
+  ctx.beginPath();
+  ctx.moveTo(-18, -20);
+  ctx.quadraticCurveTo(-26, -40 + tailWag, -34, -38 + tailWag);
+  ctx.lineTo(-30, -32 + tailWag);
+  ctx.quadraticCurveTo(-24, -34 + tailWag, -18, -16);
+  ctx.fill();
+  // White tail tip
+  ctx.fillStyle = '#FFF';
+  ctx.beginPath();
+  ctx.arc(-33, -36 + tailWag, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Head
+  ctx.fillStyle = '#E87E04';
+  ctx.beginPath();
+  ctx.ellipse(22, -26, 10, 9, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Snout
+  ctx.fillStyle = '#F5A623';
+  ctx.beginPath();
+  ctx.ellipse(30, -23, 6, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Nose
+  ctx.fillStyle = '#222';
+  ctx.beginPath();
+  ctx.arc(34, -23, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Ears (pointy triangles)
+  ctx.fillStyle = '#D06A0A';
+  ctx.beginPath();
+  ctx.moveTo(16, -33); ctx.lineTo(14, -46); ctx.lineTo(22, -34);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(24, -34); ctx.lineTo(26, -47); ctx.lineTo(30, -34);
+  ctx.closePath();
+  ctx.fill();
+  // Inner ears
+  ctx.fillStyle = '#F5C56A';
+  ctx.beginPath();
+  ctx.moveTo(17, -34); ctx.lineTo(16, -42); ctx.lineTo(21, -34);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(25, -34); ctx.lineTo(27, -43); ctx.lineTo(29, -34);
+  ctx.closePath();
+  ctx.fill();
+
+  // Eyes (bright, alert)
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.arc(24, -28, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#FFF';
+  ctx.beginPath();
+  ctx.arc(25, -29, 0.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// ─── DRAW RACCOON ───
+function drawRaccoon(rac, camX, time) {
+  const sx = rac.x - camX;
+  if (sx < -60 || sx > GAME_W + 60) return;
+  ctx.save();
+  ctx.translate(sx, rac.y);
+  if (rac.facing < 0) ctx.scale(-1, 1);
+
+  // Body (grey)
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(-14, -24, 28, 18);
+  // Head
+  ctx.fillStyle = '#A0A0A0';
+  ctx.beginPath();
+  ctx.arc(16, -24, 10, 0, Math.PI * 2);
+  ctx.fill();
+  // Mask (black around eyes — iconic raccoon look)
+  ctx.fillStyle = '#222';
+  ctx.fillRect(10, -28, 14, 5);
+  // Eyes (white dots in mask)
+  ctx.fillStyle = '#FFF';
+  ctx.fillRect(13, -27, 3, 3);
+  ctx.fillRect(20, -27, 3, 3);
+  // Ears
+  ctx.fillStyle = '#666';
+  ctx.beginPath();
+  ctx.arc(10, -33, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(22, -33, 4, 0, Math.PI * 2);
+  ctx.fill();
+  // Nose
+  ctx.fillStyle = '#333';
+  ctx.fillRect(24, -24, 3, 2);
+  // Striped tail
+  const tailSwing = Math.sin(time * 3 + rac.anim) * 8;
+  for (let s = 0; s < 4; s++) {
+    ctx.fillStyle = s % 2 === 0 ? '#666' : '#333';
+    ctx.fillRect(-14 - s * 6, -20 + tailSwing + s * 2, 6, 8);
+  }
+  // Legs
+  ctx.fillStyle = '#555';
+  const legOff = rac.vx !== 0 ? Math.sin(time * 6 + rac.anim) * 5 : 0;
+  ctx.fillRect(-8, -6, 4, 6 + legOff);
+  ctx.fillRect(6, -6, 4, 6 - legOff);
+  // Little hands (if knocking)
+  if (rac.state === 'knocking') {
+    ctx.fillStyle = '#555';
+    const knockAnim = Math.sin(time * 12) * 4;
+    ctx.fillRect(16, -18 + knockAnim, 6, 4);
+  }
+
+  ctx.restore();
+}
+
+// ─── DRAW TRASH CAN ───
+function drawTrashCan(can, camX) {
+  const sx = can.x - camX;
+  if (sx < -50 || sx > GAME_W + 50) return;
+
+  if (!can.knocked) {
+    // Upright trash can
+    ctx.fillStyle = '#555';
+    ctx.fillRect(sx - 12, can.y - 40, 24, 40);
+    // Lid
+    ctx.fillStyle = '#777';
+    ctx.fillRect(sx - 15, can.y - 44, 30, 6);
+    // Rim highlight
+    ctx.fillStyle = '#999';
+    ctx.fillRect(sx - 12, can.y - 40, 24, 3);
+  } else {
+    // Knocked over trash can
+    ctx.save();
+    ctx.translate(sx, can.y - 10);
+    ctx.rotate(Math.PI / 3);
+    ctx.fillStyle = '#555';
+    ctx.fillRect(-12, -20, 24, 40);
+    ctx.fillStyle = '#777';
+    ctx.fillRect(-15, -24, 30, 6);
+    ctx.restore();
+
+    // Spilled food (if not eaten)
+    if (can.spilledFood && !can.foodEaten) {
+      const fx = can.foodX - camX;
+      // Draw a little food pile
+      ctx.fillStyle = '#8B4513';
+      ctx.beginPath();
+      ctx.arc(fx, can.foodY - 4, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FFD700';
+      ctx.beginPath();
+      ctx.arc(fx + 5, can.foodY - 6, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FF6347';
+      ctx.beginPath();
+      ctx.arc(fx - 4, can.foodY - 3, 3, 0, Math.PI * 2);
+      ctx.fill();
+      // Sparkle to attract attention
+      ctx.fillStyle = 'rgba(255, 255, 200, ' + (0.5 + 0.5 * Math.sin(Date.now() * 0.005)) + ')';
+      ctx.font = '12px serif';
+      ctx.fillText('✦', fx - 3, can.foodY - 14);
+    }
+  }
+}
+
+// ─── HUD ───
+function drawHUD() {
+  // Background bar (taller to accommodate stamina bar)
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(0, 0, GAME_W, 56);
+
+  // Score
+  ctx.font = '700 20px Inter, sans-serif';
+  ctx.fillStyle = '#FFD700';
+  ctx.textAlign = 'left';
+  ctx.fillText(`Score: ${score}`, 16, 24);
+
+  // Combo
+  if (comboCount > 1) {
+    ctx.font = 'bold 18px Bangers, cursive';
+    ctx.fillStyle = `hsl(${comboCount * 30}, 100%, 65%)`;
+    ctx.fillText(`COMBO x${comboCount}`, 180, 24);
+  }
+
+  // Lives
+  ctx.fillStyle = '#FF5252';
+  ctx.font = '700 18px Inter, sans-serif';
+  const livesText = '\u2665'.repeat(Math.max(0, lives));
+  ctx.fillText(livesText, GAME_W - 120, 24);
+
+  // Hi-score
+  ctx.fillStyle = '#aaa';
+  ctx.font = '600 13px Inter, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(`HI: ${hiScore}`, GAME_W - 140, 24);
+  ctx.textAlign = 'left';
+
+  // Difficulty indicator
+  ctx.fillStyle = '#fff';
+  ctx.font = '600 12px Inter, sans-serif';
+  ctx.fillText(`Zone ${Math.floor(camera.x / 2000) + 1}`, GAME_W / 2 - 20, 24);
+
+  // ─── STAMINA BAR ───
+  const barX = 16;
+  const barY = 34;
+  const barW = 160;
+  const barH = 10;
+  // Background
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillRect(barX, barY, barW, barH);
+  // Fill
+  const staminaRatio = stamina / STAMINA_MAX;
+  const staminaColor = staminaRatio > 0.5 ? '#4CAF50' : staminaRatio > 0.25 ? '#FFC107' : '#F44336';
+  ctx.fillStyle = staminaColor;
+  ctx.fillRect(barX, barY, barW * staminaRatio, barH);
+  // Border
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(barX, barY, barW, barH);
+  // Label
+  ctx.font = '600 9px Inter, sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.fillText('STR', barX + barW + 5, barY + 9);
+
+  // ─── POWER-UP INDICATORS ───
+  let indicatorX = 200;
+
+  if (jumpBoostLevel > 0) {
+    ctx.fillStyle = '#4CAF50';
+    ctx.font = '600 11px Inter, sans-serif';
+    ctx.fillText(`\u2B06${jumpBoostLevel}`, indicatorX, 44);
+    indicatorX += 35;
+  }
+  if (speedBoostLevel > 0) {
+    ctx.fillStyle = '#42A5F5';
+    ctx.font = '600 11px Inter, sans-serif';
+    ctx.fillText(`\u26A1${speedBoostLevel}`, indicatorX, 44);
+    indicatorX += 35;
+  }
+  if (sizeBoostLevel > 0) {
+    ctx.fillStyle = '#9C27B0';
+    ctx.font = '600 11px Inter, sans-serif';
+    ctx.fillText(`\u2B1B${sizeBoostLevel}`, indicatorX, 44);
+    indicatorX += 35;
+  }
+  if (kickModeTimer > 0) {
+    ctx.fillStyle = '#FF5722';
+    ctx.font = 'bold 12px Inter, sans-serif';
+    ctx.fillText(`KICK ${Math.ceil(kickModeTimer)}s`, indicatorX, 44);
+    indicatorX += 70;
+  }
+  if (fartModeTimer > 0) {
+    ctx.fillStyle = '#7CB342';
+    ctx.font = 'bold 12px Inter, sans-serif';
+    ctx.fillText(`FART ${Math.ceil(fartModeTimer)}s`, indicatorX, 44);
+    indicatorX += 70;
+  }
+  if (hasFries && friesTimer > 0) {
+    ctx.fillStyle = '#FFA726';
+    ctx.font = 'bold 12px Inter, sans-serif';
+    ctx.fillText(`BARK ${Math.ceil(friesTimer)}s`, indicatorX, 44);
+    indicatorX += 70;
+  }
+  if (hasBurger) {
+    ctx.fillStyle = '#e8d44d';
+    ctx.font = 'bold 12px Inter, sans-serif';
+    ctx.fillText('PEE \uD83D\uDCA7', indicatorX, 44);
+    indicatorX += 65;
+  }
+  if (shakeSpeedTimer > 0) {
+    ctx.fillStyle = '#E91E63';
+    ctx.font = 'bold 12px Inter, sans-serif';
+    ctx.fillText(`SPEED ${Math.ceil(shakeSpeedTimer)}s`, indicatorX, 44);
+    indicatorX += 75;
+  }
+  if (canFly && flyTimer > 0) {
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 12px Inter, sans-serif';
+    ctx.fillText(`✈ FLY ${Math.ceil(flyTimer)}s`, indicatorX, 44);
+    indicatorX += 80;
+  }
+  if (chicken && !chicken.caught) {
+    ctx.fillStyle = '#FFA000';
+    ctx.font = 'bold 12px Inter, sans-serif';
+    ctx.fillText('CATCH THE CHICKEN!', indicatorX, 44);
+  }
+
+  // ─── PROGRESS TRACKER — shows next power-up progress ───
+  ctx.font = '500 9px Inter, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  let progX = 12;
+  const progY = 56;
+  const wProg = watermelonsEaten % 5;
+  const mProg = minnowsEaten % 5;
+  const cProg = catsKilled % 5;
+  const pProg = pigeonsKilled % 5;
+  if (wProg > 0) { ctx.fillText(`\uD83C\uDF49${wProg}/5`, progX, progY); progX += 38; }
+  if (mProg > 0) { ctx.fillText(`\uD83D\uDC1F${mProg}/5`, progX, progY); progX += 38; }
+  if (cProg > 0) { ctx.fillText(`\uD83D\uDC31${cProg}/5`, progX, progY); progX += 38; }
+  if (pProg > 0) { ctx.fillText(`\uD83D\uDC26${pProg}/5`, progX, progY); progX += 38; }
+}
+
+// ─── MENU SCREEN ───
+function drawMenu(time) {
+  // Animated gradient background
+  drawSky();
+  drawMountains(time * 30);
+  drawTreeLine(time * 30);
+
+  // Ground
+  ctx.fillStyle = SIDEWALK_COLOR;
+  ctx.fillRect(0, GROUND_Y, GAME_W, GAME_H - GROUND_Y);
+
+  // A few buildings in the background
+  const demoBuildingTypes = [
+    { x: 100, w: 150, h: 200, color: '#E8DCC8' },
+    { x: 280, w: 120, h: 160, color: '#F5EDE0' },
+    { x: 430, w: 180, h: 240, color: '#D4C5A9' },
+    { x: 650, w: 130, h: 180, color: '#E2D5C0' },
+    { x: 810, w: 160, h: 220, color: '#F0E6D3' },
+    { x: 1000, w: 140, h: 190, color: '#D9CDB8' }
+  ];
+  for (const b of demoBuildingTypes) {
+    ctx.fillStyle = b.color;
+    ctx.fillRect(b.x, GROUND_Y - b.h, b.w, b.h);
+    // Simple windows
+    ctx.fillStyle = '#87CEEB';
+    ctx.globalAlpha = 0.4;
+    for (let wy = 30; wy < b.h - 30; wy += 50) {
+      for (let wx = 15; wx < b.w - 15; wx += 35) {
+        ctx.fillRect(b.x + wx, GROUND_Y - b.h + wy, 18, 25);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw the dog idle in menu
+  ctx.save();
+  ctx.translate(GAME_W / 2 - 100, GROUND_Y);
+  player.x = GAME_W / 2 - 100;
+  player.y = GROUND_Y;
+  player.facing = 1;
+  player.running = false;
+  player.attacking = false;
+  ctx.restore();
+  drawPlayer(GAME_W / 2 - 100 - 16, time);
+
+  // Title overlay
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(0, 0, GAME_W, GAME_H);
+
+  // Title
+  ctx.save();
+  ctx.textAlign = 'center';
+
+  // Shadow
+  ctx.font = '700 72px Bangers, cursive';
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillText("MR PEABODY'S", GAME_W / 2 + 3, 185 + 3);
+
+  // Main title
+  const titleGrad = ctx.createLinearGradient(GAME_W / 2 - 300, 150, GAME_W / 2 + 300, 220);
+  titleGrad.addColorStop(0, '#FFD700');
+  titleGrad.addColorStop(0.5, '#FFF8E1');
+  titleGrad.addColorStop(1, '#FFD700');
+  ctx.fillStyle = titleGrad;
+  ctx.fillText("MR PEABODY'S", GAME_W / 2, 185);
+
+  // Subtitle
+  ctx.font = '600 28px Bangers, cursive';
+  ctx.fillStyle = '#E8D5B7';
+  ctx.fillText('HEALDSBURG CRUSADE', GAME_W / 2, 245);
+
+  // Start prompt
+  ctx.font = '600 18px Inter, sans-serif';
+  ctx.fillStyle = '#fff';
+  const blink = Math.sin(time * 3) > 0;
+  if (blink) {
+    ctx.fillText(isMobile ? 'TAP TO START' : 'CLICK OR PRESS SPACE TO START', GAME_W / 2, 310);
+  }
+
+  // ─── Game Guide ───
+  const guideTop = 345;
+  const colW = 280;
+  const leftCol = GAME_W / 2 - colW - 40;
+  const rightCol = GAME_W / 2 + 40;
+
+  // Controls section
+  ctx.font = 'bold 14px Inter, sans-serif';
+  ctx.fillStyle = '#FFD700';
+  ctx.textAlign = 'left';
+  ctx.fillText('CONTROLS', leftCol, guideTop);
+  ctx.font = '400 12px Inter, sans-serif';
+  ctx.fillStyle = '#ddd';
+  if (isMobile) {
+    ctx.fillText('On-screen buttons to move & jump', leftCol, guideTop + 18);
+    ctx.fillText('Attack button to chop & kick', leftCol, guideTop + 34);
+  } else {
+    ctx.fillText('Arrow Keys to move  |  Up to jump', leftCol, guideTop + 18);
+    ctx.fillText('Space to chop & kick', leftCol, guideTop + 34);
+  }
+  ctx.fillText('Down on dog beds to nap & heal', leftCol, guideTop + 50);
+
+  // Collectibles section
+  ctx.font = 'bold 14px Inter, sans-serif';
+  ctx.fillStyle = '#4CAF50';
+  ctx.fillText('COLLECT', leftCol, guideTop + 78);
+  ctx.font = '400 12px Inter, sans-serif';
+  ctx.fillStyle = '#ddd';
+  ctx.fillText('\uD83C\uDF49 Watermelons = jump boost', leftCol, guideTop + 96);
+  ctx.fillText('\uD83D\uDC1F Minnows = speed & size boost + shop $', leftCol, guideTop + 112);
+
+  // Enemies section
+  ctx.font = 'bold 14px Inter, sans-serif';
+  ctx.fillStyle = '#FF5722';
+  ctx.textAlign = 'left';
+  ctx.fillText('ENEMIES', rightCol, guideTop);
+  ctx.font = '400 12px Inter, sans-serif';
+  ctx.fillStyle = '#ddd';
+  ctx.fillText('\uD83D\uDC31 Cats — chop them! 5 kills = KICK MODE', rightCol, guideTop + 18);
+  ctx.fillText('\uD83D\uDC26 Pigeons — chop them! 5 kills = fart nuke', rightCol, guideTop + 34);
+  ctx.fillText('\uD83E\uDD8A Foxes are friendly & scare birds', rightCol, guideTop + 50);
+
+  // Powers & shop section
+  ctx.font = 'bold 14px Inter, sans-serif';
+  ctx.fillStyle = '#FF9800';
+  ctx.fillText('POWERS & SHOPS', rightCol, guideTop + 78);
+  ctx.font = '400 12px Inter, sans-serif';
+  ctx.fillStyle = '#ddd';
+  ctx.fillText("\uD83C\uDF54 Iggy's Burgers — spend minnows on food", rightCol, guideTop + 96);
+  ctx.fillText('\uD83C\uDF5F Fries = bark power  |  \uD83C\uDF54 Burger = pee attack', rightCol, guideTop + 112);
+  ctx.fillText('\uD83D\uDDD1 Eat from trash cans to fly!', rightCol, guideTop + 128);
+
+  ctx.restore();
+}
+
+// ─── GAME OVER SCREEN ───
+function drawGameOver(time) {
+  ctx.fillStyle = 'rgba(0,0,0,0.65)';
+  ctx.fillRect(0, 0, GAME_W, GAME_H);
+
+  ctx.textAlign = 'center';
+
+  ctx.font = '700 64px Bangers, cursive';
+  ctx.fillStyle = '#FF5252';
+  ctx.fillText('GAME OVER', GAME_W / 2, GAME_H / 2 - 40);
+
+  ctx.font = '700 28px Inter, sans-serif';
+  ctx.fillStyle = '#FFD700';
+  ctx.fillText(`Score: ${score}`, GAME_W / 2, GAME_H / 2 + 20);
+
+  if (score >= hiScore && score > 0) {
+    ctx.font = '600 20px Bangers, cursive';
+    ctx.fillStyle = '#4CAF50';
+    ctx.fillText('NEW HIGH SCORE!', GAME_W / 2, GAME_H / 2 + 55);
+  }
+
+  ctx.font = '600 16px Inter, sans-serif';
+  ctx.fillStyle = '#ccc';
+  const blink = Math.sin(time * 3) > 0;
+  if (blink) {
+    ctx.fillText(isMobile ? 'Tap to Restart' : 'Press SPACE or ENTER to Restart', GAME_W / 2, GAME_H / 2 + 100);
+  }
+  ctx.textAlign = 'left';
+}
+
+// ─── FOX AI ───
+function updateFoxes(dt) {
+  foxes.forEach(f => {
+    f.anim += dt;
+    f.stateTimer -= dt;
+
+    if (f.state === 'idle') {
+      f.vx = 0;
+      if (f.stateTimer <= 0) {
+        f.state = 'trotting';
+        f.facing = Math.random() > 0.5 ? 1 : -1;
+        f.stateTimer = rand(2, 4);
+      }
+      // Check for nearby pigeons
+      let closest = null, closestDist = 400;
+      enemies.forEach(e => {
+        if (e.type === 'pigeon' && e.alive) {
+          const d = Math.abs(e.x - f.x);
+          if (d < closestDist) { closest = e; closestDist = d; }
+        }
+      });
+      if (closest) {
+        f.target = closest;
+        f.state = 'chasing_bird';
+        f.stateTimer = 5;
+      }
+    } else if (f.state === 'trotting') {
+      f.vx = f.facing * 60;
+      if (f.stateTimer <= 0) {
+        f.state = 'idle';
+        f.stateTimer = rand(1, 3);
+      }
+      // Check for nearby pigeons
+      let closest = null, closestDist = 400;
+      enemies.forEach(e => {
+        if (e.type === 'pigeon' && e.alive) {
+          const d = Math.abs(e.x - f.x);
+          if (d < closestDist) { closest = e; closestDist = d; }
+        }
+      });
+      if (closest) {
+        f.target = closest;
+        f.state = 'chasing_bird';
+        f.stateTimer = 5;
+      }
+    } else if (f.state === 'chasing_bird') {
+      if (!f.target || !f.target.alive) {
+        f.state = 'idle';
+        f.stateTimer = rand(1, 2);
+        f.target = null;
+      } else {
+        const dx = f.target.x - f.x;
+        f.facing = dx > 0 ? 1 : -1;
+        f.vx = f.facing * 140;
+        // Catch pigeon
+        if (Math.abs(dx) < 30 && Math.abs(f.target.y - f.y) < 80) {
+          f.target.alive = false;
+          f.state = 'idle';
+          f.stateTimer = rand(2, 4);
+          f.target = null;
+        }
+      }
+      if (f.stateTimer <= 0) {
+        f.state = 'idle';
+        f.stateTimer = rand(1, 3);
+        f.target = null;
+      }
+    }
+
+    f.x += f.vx * dt;
+    // Keep in world bounds
+    if (f.x < 50) { f.x = 50; f.facing = 1; }
+    if (f.x > WORLD_W - 50) { f.x = WORLD_W - 50; f.facing = -1; }
+  });
+}
+
+// ─── RACCOON AI ───
+function updateRaccoons(dt) {
+  raccoons.forEach(r => {
+    r.anim += dt;
+    r.stateTimer -= dt;
+
+    if (r.state === 'wandering') {
+      r.vx = r.facing * 30;
+      if (r.stateTimer <= 0) {
+        r.facing *= -1;
+        r.stateTimer = rand(2, 5);
+      }
+      // Check for nearby upright trash can
+      let closest = null, closestDist = 300;
+      trashCans.forEach(tc => {
+        if (!tc.knocked) {
+          const d = Math.abs(tc.x - r.x);
+          if (d < closestDist) { closest = tc; closestDist = d; }
+        }
+      });
+      if (closest) {
+        r.target = closest;
+        r.state = 'approaching';
+        r.stateTimer = 6;
+      }
+    } else if (r.state === 'approaching') {
+      if (!r.target || r.target.knocked) {
+        r.state = 'wandering';
+        r.stateTimer = rand(2, 4);
+        r.target = null;
+      } else {
+        const dx = r.target.x - r.x;
+        r.facing = dx > 0 ? 1 : -1;
+        r.vx = r.facing * 50;
+        // Reach trash can
+        if (Math.abs(dx) < 25) {
+          r.state = 'knocking';
+          r.stateTimer = 1.0;
+          r.vx = 0;
+        }
+      }
+      if (r.stateTimer <= 0) {
+        r.state = 'wandering';
+        r.stateTimer = rand(2, 4);
+        r.target = null;
+      }
+    } else if (r.state === 'knocking') {
+      r.vx = 0;
+      if (r.stateTimer <= 0) {
+        if (r.target && !r.target.knocked) {
+          r.target.knocked = true;
+          r.target.spilledFood = true;
+          r.target.foodEaten = false;
+          r.target.foodX = r.target.x + rand(-20, 20);
+          r.target.foodY = GROUND_Y - 10;
+        }
+        r.state = 'fleeing';
+        r.facing = Math.random() > 0.5 ? 1 : -1;
+        r.stateTimer = 2;
+        r.target = null;
+      }
+    } else if (r.state === 'fleeing') {
+      r.vx = r.facing * 120;
+      if (r.stateTimer <= 0) {
+        r.state = 'wandering';
+        r.stateTimer = rand(3, 6);
+      }
+    }
+
+    r.x += r.vx * dt;
+    // Keep in world bounds
+    if (r.x < 50) { r.x = 50; r.facing = 1; }
+    if (r.x > WORLD_W - 50) { r.x = WORLD_W - 50; r.facing = -1; }
+  });
+}
+
+// ─── GAME LOGIC UPDATE ───
+function updateGame(dt) {
+  gameTime += dt;
+  difficulty = 1 + Math.floor(camera.x / 2000) * 0.2;
+
+  // Player input
+  const moveLeft = keys['ArrowLeft'] || keys['KeyA'] || touchAction.left;
+  const moveRight = keys['ArrowRight'] || keys['KeyD'] || touchAction.right;
+  const jumpKey = justPressed['ArrowUp'] || justPressed['KeyW'] || touchJumpJustPressed;
+  const attackKey = justPressed['Space'] || justPressed['KeyX'] || justPressed['ShiftLeft'] || justPressed['ShiftRight'] || justPressed['KeyZ'] || touchAttackJustPressed;
+
+  // If napping, skip normal input and handle nap
+  if (isNapping) {
+    napTimer += dt;
+    napBubble += dt * 3;
+    player.vx = 0;
+    player.running = false;
+    if (napTimer >= NAP_DURATION) {
+      isNapping = false;
+      stamina = STAMINA_MAX;
+      addFloatingText(player.x, player.y - 60, 'FULLY RESTED!', '#4CAF50');
+      spawnParticles(player.x, player.y - 30, '#4CAF50', 10, 120, 120);
+    }
+    // Any input cancels nap early
+    if (moveLeft || moveRight || jumpKey || attackKey) {
+      isNapping = false;
+      // Partial restore based on how long they napped
+      stamina = Math.min(STAMINA_MAX, stamina + (napTimer / NAP_DURATION) * STAMINA_MAX);
+    }
+    if (isNapping) {
+      // Skip rest of input processing while napping
+      clearJustPressed();
+      return;
+    }
+  }
+
+  // Effective run speed with speed boost
+  const effectiveSpeed = RUN_SPEED + speedBoostLevel * 30 + (shakeSpeedTimer > 0 ? 120 : 0);
+
+  // Horizontal movement
+  if (moveLeft) {
+    player.vx = -effectiveSpeed;
+    player.facing = -1;
+    player.running = true;
+  } else if (moveRight) {
+    player.vx = effectiveSpeed;
+    player.facing = 1;
+    player.running = true;
+  } else {
+    player.vx *= FRICTION;
+    if (Math.abs(player.vx) < 10) player.vx = 0;
+    player.running = false;
+  }
+
+  // Burger shop entry (BEFORE jump check so up-arrow enters shop, not jumps)
+  if (burgerShop) {
+    const nearDoor = Math.abs(player.x - burgerShop.doorX) < 35 && player.grounded;
+    burgerShop.playerNear = nearDoor;
+    if (nearDoor && jumpKey) {
+      gameState = STATE.SHOP;
+      shopCursor = 0;
+      // Show the EXIT SHOP button
+      var exitBtn = document.getElementById('exit-shop-btn');
+      if (exitBtn) exitBtn.style.display = 'block';
+      // Consume the key so the player doesn't jump on exit
+      justPressed['ArrowUp'] = false;
+      justPressed['KeyW'] = false;
+      touchJumpJustPressed = false;
+      return; // skip rest of updateGame this frame
+    }
+  }
+
+  // Jump (boosted by watermelons)
+  const effectiveJumpVel = JUMP_VEL - jumpBoostLevel * 40;
+  if (jumpKey && player.grounded) {
+    player.vy = effectiveJumpVel;
+    player.grounded = false;
+    player.jumping = true;
+    playJump();
+  }
+
+  // Attack
+  if (attackKey && player.attackCooldown <= 0) {
+    player.attacking = true;
+    player.attackTimer = ATTACK_DURATION;
+    player.attackCooldown = ATTACK_COOLDOWN;
+    playChop();
+
+    // Bark ability (from fries) — kills pigeons within 300px
+    if (hasFries && friesTimer > 0) {
+      playBark();
+      barkWaves.push({ x: player.x, y: player.y - 20, radius: 10, life: 0.5, maxLife: 0.5 });
+      for (const e of enemies) {
+        if (e.type === 'pigeon' && e.alive) {
+          const dist = Math.abs(e.x - player.x);
+          if (dist < 300) {
+            // Kill pigeon
+            e.alive = false;
+            score += 15;
+            pigeonsKilled++;
+            addFloatingText(e.x, e.y - 30, '+15 BARK!', '#ffa500');
+            spawnParticles(e.x, e.y, '#888888', 8, 100, 100);
+            // Trigger chicken spawn every 5 pigeon kills
+            if (pigeonsKilled % 5 === 0 && !chicken) {
+              chicken = {
+                x: player.x + rand(-200, 200),
+                y: -50,
+                vx: 0, vy: 0,
+                grounded: false,
+                runDir: Math.random() > 0.5 ? 1 : -1,
+                anim: 0,
+                caught: false
+              };
+              addFloatingText(player.x, player.y - 80, 'CHICKEN INCOMING!', '#FFD700');
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Apply gravity (reduced when flying)
+  if (!player.grounded) {
+    const gravMult = (canFly && flyTimer > 0) ? 0.15 : 1;
+    player.vy += GRAVITY * gravMult * dt;
+  }
+
+  // Move player
+  player.x += player.vx * dt;
+  player.y += player.vy * dt;
+
+  // Clamp to world
+  player.x = clamp(player.x, 20, WORLD_W - 20);
+
+  // Ground collision
+  if (player.y >= GROUND_Y) {
+    player.y = GROUND_Y;
+    player.vy = 0;
+    player.grounded = true;
+    player.jumping = false;
+  }
+
+  // Platform collision
+  player.grounded = player.y >= GROUND_Y;
+  for (const p of platforms) {
+    if (player.vy > 0 &&
+        player.x > p.x - 10 && player.x < p.x + p.w + 10 &&
+        player.y >= p.y && player.y - player.vy * dt < p.y + 5) {
+      player.y = p.y;
+      player.vy = 0;
+      player.grounded = true;
+      player.jumping = false;
+    }
+  }
+
+  // Update animation
+  player.anim += dt;
+  player.hairPhase += dt * 2;
+
+  // Attack timer
+  if (player.attacking) {
+    player.attackTimer -= dt;
+    if (player.attackTimer <= 0) {
+      player.attacking = false;
+    }
+  }
+  if (player.attackCooldown > 0) player.attackCooldown -= dt;
+
+  // Invincibility timer
+  if (invincibleTimer > 0) invincibleTimer -= dt;
+
+  // Combo timer
+  if (comboTimer > 0) {
+    comboTimer -= dt;
+    if (comboTimer <= 0) comboCount = 0;
+  }
+
+  // Screen shake
+  if (screenShake > 0) screenShake -= dt;
+
+  // Camera
+  const targetCamX = player.x - GAME_W * 0.35;
+  camera.x = lerp(camera.x, clamp(targetCamX, 0, WORLD_W - GAME_W), camera.smoothing);
+
+  // Collectible pickup
+  for (const c of collectibles) {
+    if (c.collected) continue;
+    const dx = player.x - c.x;
+    const dy = (player.y - 28) - c.y;
+    if (Math.abs(dx) < 30 && Math.abs(dy) < 30) {
+      c.collected = true;
+      const points = c.type === 'watermelon' ? 50 : 30;
+      const mult = Math.max(1, comboCount);
+      score += points * mult;
+      comboCount++;
+      comboTimer = 2.0;
+      playCollect();
+      spawnParticles(c.x, c.y, c.type === 'watermelon' ? '#4CAF50' : '#42A5F5', 8, 100, 120);
+      addFloatingText(c.x, c.y, `+${points * mult}`, c.type === 'watermelon' ? '#4CAF50' : '#42A5F5');
+
+      // Power-up tracking
+      if (c.type === 'watermelon') {
+        watermelonsEaten++;
+        if (watermelonsEaten % 5 === 0) {
+          jumpBoostLevel++;
+          playPowerUp();
+          addFloatingText(c.x, c.y - 30, 'JUMP BOOST!', '#FFD700');
+          spawnParticles(player.x, player.y - 30, '#FFD700', 15, 200, 200);
+        }
+      } else {
+        // Minnow: refill stamina + alternating speed/size boost
+        minnowsEaten++;
+        stamina = Math.min(STAMINA_MAX, stamina + 30); // each minnow refills 30% stamina
+        if (minnowsEaten % 5 === 0) {
+          // Alternate: odd batches = speed, even batches = size
+          if ((minnowsEaten / 5) % 2 === 1) {
+            speedBoostLevel++;
+            playPowerUp();
+            addFloatingText(c.x, c.y - 30, 'SPEED UP!', '#42A5F5');
+          } else {
+            sizeBoostLevel++;
+            playPowerUp();
+            addFloatingText(c.x, c.y - 30, 'SIZE UP!', '#9C27B0');
+          }
+          spawnParticles(player.x, player.y - 30, '#42A5F5', 15, 200, 200);
+        }
+      }
+    }
+  }
+
+  // Enemy AI & collision
+  for (const e of enemies) {
+    if (!e.alive) {
+      if (e.falling) {
+        e.vy += GRAVITY * dt * 0.5;
+        e.y += e.vy * dt;
+      }
+      continue;
+    }
+
+    // Frozen state — skip patrol, count down timer
+    if (e.frozen) {
+      e.frozenTimer -= dt;
+      if (e.frozenTimer <= 0) {
+        e.frozen = false;
+        e.frozenTimer = 0;
+      }
+      e.anim += dt;
+      if (e.flash > 0) e.flash -= dt;
+      continue;
+    }
+
+    // Patrol
+    if (e.type === 'cat') {
+      e.x += e.patrolDir * 60 * difficulty * dt;
+      if (Math.abs(e.x - e.patrolOrigin) > e.patrolRange) {
+        e.patrolDir *= -1;
+      }
+    } else {
+      // Pigeon flies in a pattern
+      e.x += e.patrolDir * 80 * difficulty * dt;
+      e.y += Math.sin(gameTime * 2 + e.anim) * 30 * dt;
+      if (Math.abs(e.x - e.patrolOrigin) > e.patrolRange) {
+        e.patrolDir *= -1;
+      }
+    }
+
+    e.anim += dt;
+    if (e.flash > 0) e.flash -= dt;
+
+    // Attack check (chop or kick in kick mode)
+    if (player.attacking && player.attackTimer > 0) {
+      const effectiveRange = kickModeTimer > 0 ? ATTACK_RANGE * 1.3 : ATTACK_RANGE;
+      const attackX = player.x + player.facing * effectiveRange;
+      const dx = e.x - attackX;
+      const dy = (e.type === 'cat' ? e.y - 20 : e.y) - (player.y - 28);
+      const hitRange = kickModeTimer > 0 ? 50 : 40;
+      if (Math.abs(dx) < hitRange && Math.abs(dy) < 50) {
+        e.alive = false;
+        e.vy = -200;
+        e.falling = true;
+        const pts = e.type === 'cat' ? 100 : 75;
+        const bonusMult = kickModeTimer > 0 ? 2 : 1;
+        const mult = Math.max(1, comboCount) * bonusMult;
+        score += pts * mult;
+        comboCount++;
+        comboTimer = 2.0;
+        screenShake = 0.15;
+        spawnParticles(e.x, e.y - 15, '#FFEB3B', 12, 150, 180);
+        addFloatingText(e.x, e.y - 30, `+${pts * mult}`, '#FFD700');
+        addFloatingText(e.x, e.y - 50, kickModeTimer > 0 ? 'KICK!' : 'CHOP!', '#FF5722');
+
+        // Track kills for power-ups
+        if (e.type === 'cat') {
+          catsKilled++;
+          if (catsKilled % 5 === 0) {
+            kickModeTimer = KICK_MODE_DURATION;
+            playKickMode();
+            addFloatingText(player.x, player.y - 70, 'KICK MODE!', '#FF5722');
+            spawnParticles(player.x, player.y - 30, '#FF5722', 20, 200, 200);
+          }
+        } else {
+          pigeonsKilled++;
+          if (pigeonsKilled % 5 === 0 && !chicken) {
+            // Spawn a chicken falling from the sky
+            chicken = {
+              x: player.x + rand(-200, 200),
+              y: -50, // starts above screen
+              vx: 0, vy: 0,
+              grounded: false,
+              runDir: Math.random() > 0.5 ? 1 : -1,
+              anim: 0,
+              caught: false
+            };
+            playChickenSpawn();
+            addFloatingText(player.x, player.y - 70, 'CHICKEN INCOMING!', '#FFA000');
+          }
+        }
+      }
+    }
+
+    // Player damage
+    if (invincibleTimer <= 0 && e.alive && fartModeTimer <= 0) {
+      const dx = player.x - e.x;
+      const dy = (player.y - 20) - (e.type === 'cat' ? e.y - 15 : e.y);
+      if (Math.abs(dx) < 28 && Math.abs(dy) < 30) {
+        lives--;
+        invincibleTimer = 1.5;
+        screenShake = 0.3;
+        player.vy = -300;
+        player.vx = -player.facing * 200;
+        player.grounded = false;
+        playHit();
+        spawnParticles(player.x, player.y - 20, '#FF5252', 10, 120, 150);
+
+        // Power loss on damage — drain stamina, only lose boosts on repeated hits at low stamina
+        stamina = Math.max(0, stamina - 25);
+        if (stamina <= 0) {
+          // Only lose a boost level when stamina is depleted
+          if (jumpBoostLevel > 0) { jumpBoostLevel--; addFloatingText(player.x, player.y - 50, 'JUMP -1', '#FF5252'); }
+          else if (speedBoostLevel > 0) { speedBoostLevel--; addFloatingText(player.x, player.y - 50, 'SPEED -1', '#FF5252'); }
+          else if (sizeBoostLevel > 0) { sizeBoostLevel--; addFloatingText(player.x, player.y - 50, 'SIZE -1', '#FF5252'); }
+        }
+        // Shorten kick mode if hit
+        if (kickModeTimer > 0) {
+          kickModeTimer = Math.max(0, kickModeTimer - 2);
+        }
+
+        if (lives <= 0) {
+          gameState = STATE.GAMEOVER;
+          if (score > hiScore) hiScore = score;
+          playGameOver();
+        }
+      }
+    }
+  }
+
+  // Update particles
+  for (const p of particles) {
+    if (p.active) p.update(dt);
+  }
+  particles = particles.filter(p => p.active);
+
+  // Update floating texts
+  for (const ft of floatingTexts) {
+    ft.y += ft.vy * dt;
+    ft.life -= dt;
+  }
+  floatingTexts = floatingTexts.filter(f => f.life > 0);
+
+  // ─── KICK MODE TIMER ───
+  if (kickModeTimer > 0) {
+    kickModeTimer -= dt;
+    if (kickModeTimer <= 0) {
+      kickModeTimer = 0;
+      addFloatingText(player.x, player.y - 60, 'KICK MODE OFF', '#999');
+    }
+  }
+
+  // ─── CHICKEN LOGIC ───
+  if (chicken && !chicken.caught) {
+    chicken.anim += dt;
+    // Gravity until grounded
+    if (!chicken.grounded) {
+      chicken.vy += GRAVITY * dt;
+      chicken.y += chicken.vy * dt;
+      if (chicken.y >= GROUND_Y) {
+        chicken.y = GROUND_Y;
+        chicken.vy = 0;
+        chicken.grounded = true;
+      }
+    } else {
+      // Run around erratically
+      chicken.x += chicken.runDir * 180 * dt;
+      // Change direction randomly
+      if (Math.random() < 0.02) chicken.runDir *= -1;
+      // Clamp to world
+      if (chicken.x < 50 || chicken.x > WORLD_W - 50) chicken.runDir *= -1;
+    }
+
+    // Player catches chicken
+    const cdx = player.x - chicken.x;
+    const cdy = (player.y - 20) - (chicken.y - 15);
+    if (Math.abs(cdx) < 35 && Math.abs(cdy) < 35) {
+      chicken.caught = true;
+      chicken = null;
+      // Activate fart mode!
+      fartModeTimer = FART_MODE_DURATION;
+      playFart();
+      addFloatingText(player.x, player.y - 70, 'FART NUKE!', '#7CB342');
+      screenShake = 0.5;
+      // Kill all on-screen enemies
+      for (const e of enemies) {
+        if (!e.alive) continue;
+        const esx = e.x - camera.x;
+        if (esx > -50 && esx < GAME_W + 50) {
+          e.alive = false;
+          e.vy = -300;
+          e.falling = true;
+          score += 200;
+          spawnParticles(e.x, e.y - 15, '#7CB342', 10, 150, 180);
+        }
+      }
+    }
+  }
+
+  // ─── FART MODE ───
+  if (fartModeTimer > 0) {
+    fartModeTimer -= dt;
+    // Spawn fart cloud particles around player
+    if (Math.random() < 0.4) {
+      fartClouds.push({
+        x: player.x + rand(-30, 30),
+        y: player.y - rand(10, 40),
+        vx: rand(-40, 40),
+        vy: rand(-60, -20),
+        size: rand(8, 20),
+        life: rand(0.5, 1.2),
+        maxLife: 1.2
+      });
+    }
+    // Fart kills any enemy that comes close
+    for (const e of enemies) {
+      if (!e.alive) continue;
+      const fdx = player.x - e.x;
+      const fdy = (player.y - 20) - (e.type === 'cat' ? e.y - 15 : e.y);
+      if (Math.abs(fdx) < 100 && Math.abs(fdy) < 80) {
+        e.alive = false;
+        e.vy = -200;
+        e.falling = true;
+        score += 100;
+        spawnParticles(e.x, e.y - 15, '#7CB342', 8, 100, 120);
+      }
+    }
+    if (fartModeTimer <= 0) {
+      fartModeTimer = 0;
+      fartClouds = [];
+      addFloatingText(player.x, player.y - 60, 'FARTS GONE', '#999');
+    }
+  }
+
+  // Update fart clouds
+  for (const fc of fartClouds) {
+    fc.x += fc.vx * dt;
+    fc.y += fc.vy * dt;
+    fc.life -= dt;
+  }
+  fartClouds = fartClouds.filter(fc => fc.life > 0);
+
+  // ─── DOG BED NAP CHECK ───
+  // If player is standing on a dog bed and presses down, start napping
+  const napKey = keys['ArrowDown'] || keys['KeyS'] || touchAction.down;
+  if (napKey && player.grounded && !isNapping && stamina < STAMINA_MAX) {
+    for (const bed of dogBeds) {
+      if (player.x > bed.x - 5 && player.x < bed.x + bed.w + 5 &&
+          Math.abs(player.y - bed.y) < 5) {
+        isNapping = true;
+        napTimer = 0;
+        napBubble = 0;
+        playNap();
+        addFloatingText(player.x, player.y - 50, 'ZZZ...', '#9C27B0');
+        break;
+      }
+    }
+  }
+
+  // Pee ability (from burgers) — down key while grounded & not napping
+  const peeJustPressed = justPressed['ArrowDown'] || justPressed['KeyS'] || touchDownJustPressed;
+  if (hasBurger && (napKey || peeJustPressed) && player.grounded && !isNapping) {
+    // Only spawn puddle if not already very close to one
+    let canPee = true;
+    for (const p of peePuddles) {
+      if (Math.abs(p.x - player.x) < 40) { canPee = false; break; }
+    }
+    if (canPee) {
+      playPee();
+      peePuddles.push({ x: player.x, y: GROUND_Y, radius: 18, life: 8, maxLife: 8 });
+      addFloatingText(player.x, player.y - 40, 'PEE!', '#e8d44d');
+    }
+  }
+
+  // ─── UPDATE FOXES & RACCOONS ───
+  updateFoxes(dt);
+  updateRaccoons(dt);
+
+  // ─── TRASH FOOD PICKUP → FLIGHT POWER ───
+  trashCans.forEach(tc => {
+    if (tc.knocked && tc.spilledFood && !tc.foodEaten) {
+      const dx = Math.abs(player.x - tc.foodX);
+      const dy = Math.abs(player.y - tc.foodY);
+      if (dx < 30 && dy < 40) {
+        tc.foodEaten = true;
+        canFly = true;
+        flyTimer = FLY_DURATION;
+        addFloatingText(player.x, player.y - 50, 'FLIGHT POWER!', '#FFD700');
+        spawnParticles(player.x, player.y - 20, '#FFD700', 12, 150, 150);
+      }
+    }
+  });
+
+  // ─── FLIGHT CONTROLS ───
+  if (canFly && flyTimer > 0) {
+    flyTimer -= dt;
+    // Hold jump to go up while flying
+    if (keys.ArrowUp || keys[' '] || keys.w || keys.W) {
+      player.vy = -200;
+      player.grounded = false;
+    }
+    if (flyTimer <= 0) {
+      flyTimer = 0;
+      canFly = false;
+    }
+  }
+
+  // ─── STAMINA DRAIN ───
+  // Stamina slowly drains when running or attacking (not while idle/napping)
+  if (player.running || player.attacking) {
+    stamina = Math.max(0, stamina - 1.5 * dt);
+  }
+  // Low stamina reduces speed
+  if (stamina <= 0) {
+    player.vx *= 0.8;
+  }
+
+  // ─── POWER-UP TIMER COUNTDOWNS ───
+  if (friesTimer > 0) {
+    friesTimer -= dt;
+    if (friesTimer <= 0) { friesTimer = 0; hasFries = false; }
+  }
+  // Burger/pee is now permanent once purchased
+  // (burgerTimer kept for HUD display but no longer expires)
+  if (shakeSpeedTimer > 0) {
+    shakeSpeedTimer -= dt;
+    if (shakeSpeedTimer <= 0) shakeSpeedTimer = 0;
+  }
+
+  // ─── PEE PUDDLE UPDATES ───
+  for (let i = peePuddles.length - 1; i >= 0; i--) {
+    peePuddles[i].life -= dt;
+    if (peePuddles[i].life <= 0) {
+      peePuddles.splice(i, 1);
+      continue;
+    }
+    // Freeze cats that walk over puddles
+    const puddle = peePuddles[i];
+    for (const e of enemies) {
+      if (e.type === 'cat' && e.alive && !e.frozen && Math.abs(e.x - puddle.x) < puddle.radius + 15) {
+        e.frozen = true;
+        e.frozenTimer = 5;
+        score += 150;
+        addFloatingText(e.x, e.y - 30, '+150 FROZEN!', '#87CEEB');
+        spawnParticles(e.x, e.y, '#87CEEB', 8, 80, 80);
+      }
+    }
+  }
+
+  // ─── BARK WAVE UPDATES ───
+  for (let i = barkWaves.length - 1; i >= 0; i--) {
+    barkWaves[i].life -= dt;
+    barkWaves[i].radius += 400 * dt; // expand outward
+    if (barkWaves[i].life <= 0) {
+      barkWaves.splice(i, 1);
+    }
+  }
+
+  // Update music tempo based on power level
+  updateMusic();
+}
+
+// ─── RENDER ───
+function render(time) {
+  ctx.save();
+
+  // Apply letterboxing scale
+  ctx.translate(offsetX, offsetY);
+  ctx.scale(scale, scale);
+
+  // Screen shake
+  if (screenShake > 0) {
+    ctx.translate(
+      (Math.random() - 0.5) * screenShake * 30,
+      (Math.random() - 0.5) * screenShake * 20
+    );
+  }
+
+  // Clip to game area
+  ctx.beginPath();
+  ctx.rect(0, 0, GAME_W, GAME_H);
+  ctx.clip();
+
+  if (gameState === STATE.MENU) {
+    drawMenu(time);
+  } else if (gameState === STATE.PLAYING || gameState === STATE.GAMEOVER) {
+    const camX = camera.x;
+
+    // Sky
+    drawSky();
+
+    // Parallax layers
+    drawMountains(camX);
+    drawTreeLine(camX);
+
+    // Buildings (behind player)
+    for (const b of buildings) {
+      b.draw(ctx, camX);
+    }
+
+    // Gazebo
+    drawGazebo(camX);
+
+    // Burger Shop
+    drawBurgerShop(camX, time);
+
+    // Street lamps
+    drawStreetLamps(camX);
+
+    // Street trees
+    drawStreetTrees(camX);
+
+    // Ground
+    drawGround(camX);
+
+    // Platforms
+    for (const p of platforms) {
+      drawPlatform(p, camX);
+    }
+
+    // Dog beds on platforms
+    for (const bed of dogBeds) {
+      drawDogBed(bed, camX, time);
+    }
+
+    // Collectibles
+    for (const c of collectibles) {
+      if (c.collected) continue;
+      const sx = c.x - camX;
+      if (sx < -30 || sx > GAME_W + 30) continue;
+      if (c.type === 'watermelon') {
+        drawWatermelon(c.x, c.y, camX, time, c.bobPhase);
+      } else {
+        drawMinnow(c.x, c.y, camX, time, c.bobPhase);
+      }
+    }
+
+    // Trash cans
+    for (const tc of trashCans) {
+      drawTrashCan(tc, camX);
+    }
+
+    // Enemies
+    for (const e of enemies) {
+      if (!e.alive && e.y > GAME_H + 50) continue;
+      if (e.type === 'cat') drawCat(e, camX, time);
+      else drawPigeon(e, camX, time);
+
+      // Frozen effect overlay on cats
+      if (e.type === 'cat' && e.frozen && e.alive) {
+        const esx = e.x - camX;
+        if (esx > -60 && esx < GAME_W + 60) {
+          // Blue ice overlay
+          ctx.globalAlpha = 0.4;
+          ctx.fillStyle = '#87CEEB';
+          ctx.fillRect(esx - 18, e.y - 32, 36, 32);
+          ctx.globalAlpha = 1;
+          // Ice sparkle border
+          ctx.strokeStyle = '#ADD8E6';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(esx - 18, e.y - 32, 36, 32);
+          // Snowflake emoji
+          ctx.font = '14px serif';
+          ctx.fillStyle = '#FFF';
+          ctx.textAlign = 'center';
+          ctx.fillText('❄', esx, e.y - 36);
+          ctx.textAlign = 'left';
+        }
+      }
+    }
+
+    // Foxes
+    for (const f of foxes) {
+      drawFox(f, camX, time);
+    }
+
+    // Raccoons
+    for (const r of raccoons) {
+      drawRaccoon(r, camX, time);
+    }
+
+    // Chicken
+    drawChicken(camX, time);
+
+    // Player
+    drawPlayer(camX, time);
+
+    // Pee puddles
+    for (const puddle of peePuddles) {
+      const px = puddle.x - camX;
+      if (px < -40 || px > GAME_W + 40) continue;
+      ctx.globalAlpha = 0.7 * (puddle.life / puddle.maxLife);
+      ctx.fillStyle = '#e8d44d';
+      ctx.beginPath();
+      ctx.ellipse(px, puddle.y, puddle.radius, puddle.radius * 0.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    // Bark waves
+    for (const wave of barkWaves) {
+      ctx.globalAlpha = 0.5 * (wave.life / wave.maxLife);
+      ctx.strokeStyle = '#ffa500';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(wave.x - camX, wave.y, wave.radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // Fart clouds
+    drawFartClouds(camX);
+
+    // Particles
+    for (const p of particles) {
+      if (p.active) p.draw(ctx, camX);
+    }
+
+    // Floating texts
+    for (const ft of floatingTexts) {
+      ctx.globalAlpha = ft.life;
+      ctx.font = 'bold 18px Bangers, cursive';
+      ctx.fillStyle = ft.color;
+      ctx.textAlign = 'center';
+      ctx.fillText(ft.text, ft.x - camX, ft.y);
+      ctx.textAlign = 'left';
+      ctx.globalAlpha = 1;
+    }
+
+    // HUD
+    drawHUD();
+
+    if (gameState === STATE.GAMEOVER) {
+      drawGameOver(time);
+    }
+  } else if (gameState === STATE.SHOP) {
+    drawShopInterior(time);
+  }
+
+  ctx.restore();
+
+  // Black bars for letterboxing
+  if (offsetX > 0) {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, offsetX, H);
+    ctx.fillRect(W - offsetX, 0, offsetX, H);
+  }
+  if (offsetY > 0) {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, offsetY);
+    ctx.fillRect(0, H - offsetY, W, offsetY);
+  }
+}
+
+// ─── GAME LOOP ───
+let lastTime = 0;
+
+function gameLoop(timestamp) {
+  const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+  lastTime = timestamp;
+
+  // Handle deferred start/restart (from touch on canvas)
+  if (startGameRequested) {
+    startGameRequested = false;
+    if (gameState === STATE.MENU || gameState === STATE.GAMEOVER) {
+      startGame();
+    }
+  }
+
+  if (gameState === STATE.PLAYING) {
+    updateGame(dt);
+  }
+  if (gameState === STATE.SHOP) {
+    updateShop();
+  }
+
+  render(timestamp / 1000);
+  clearJustPressed();
+  requestAnimationFrame(gameLoop);
+}
+
+// ─── START / RESTART ───
+function startGame() {
+  score = 0;
+  lives = 3;
+  comboCount = 0;
+  comboTimer = 0;
+  invincibleTimer = 0;
+  screenShake = 0;
+  gameTime = 0;
+  difficulty = 1;
+  // Reset power-up state
+  stamina = STAMINA_MAX;
+  watermelonsEaten = 0;
+  jumpBoostLevel = 0;
+  minnowsEaten = 0;
+  speedBoostLevel = 0;
+  sizeBoostLevel = 0;
+  catsKilled = 0;
+  kickModeTimer = 0;
+  pigeonsKilled = 0;
+  chicken = null;
+  fartModeTimer = 0;
+  fartClouds = [];
+  isNapping = false;
+  napTimer = 0;
+  napBubble = 0;
+  // Reset music
+  bgMusic.currentTime = 0;
+  musicPlaying = false;
+  // Reset burger shop state
+  minnowsSpent = 0;
+  hasFries = false;
+  friesTimer = 0;
+  hasBurger = false;
+  burgerTimer = 0;
+  shakeSpeedTimer = 0;
+  shopCursor = 0;
+  peePuddles = [];
+  barkWaves = [];
+  // Reset new entities and flight
+  foxes = [];
+  raccoons = [];
+  trashCans = [];
+  canFly = false;
+  flyTimer = 0;
+  // Hide exit shop button
+  var exitBtn = document.getElementById('exit-shop-btn');
+  if (exitBtn) exitBtn.style.display = 'none';
+  // Reset player
+  player.x = 200;
+  player.y = GROUND_Y;
+  player.vx = 0;
+  player.vy = 0;
+  player.grounded = true;
+  player.attacking = false;
+  player.attackTimer = 0;
+  player.attackCooldown = 0;
+  camera.x = 0;
+  generateWorld();
+  gameState = STATE.PLAYING;
+}
+
+// ─── INPUT HANDLERS ───
+function handleStart() {
+  grabFocus();
+  initAudio();
+  if (gameState === STATE.MENU || gameState === STATE.GAMEOVER) {
+    startGame();
+  }
+}
+
+// Listen for start on canvas, document, AND window for iframe compat
+function onStartKey(e) {
+  if (gameState !== STATE.PLAYING && gameState !== STATE.SHOP && (e.code === 'Space' || e.code === 'Enter')) {
+    e.preventDefault();
+    handleStart();
+  }
+}
+canvas.addEventListener('keydown', onStartKey);
+document.addEventListener('keydown', onStartKey);
+
+canvas.addEventListener('click', () => {
+  handleStart();
+});
+
+// Audio init is handled in the canvas touchstart handler above
+
+// ─── DETERMINISTIC HOOKS FOR TESTING ───
+// Debug helper for testing
+window.setKickMode = function(seconds) { kickModeTimer = seconds || 30; };
+window.setInvincible = function(seconds) { invincibleTimer = seconds || 999; lives = 3; };
+window.getBgMusic = function() { return { paused: bgMusic.paused, currentTime: bgMusic.currentTime, duration: bgMusic.duration, readyState: bgMusic.readyState, src: bgMusic.src }; };
+window.setFartMode = function(seconds) { fartModeTimer = seconds || 30; };
+window.setFlyMode = function(seconds) { canFly = true; flyTimer = seconds || 30; };
+window.teleportPlayer = function(x) { player.x = x; player.vx = 0; };
+window.giveMinnows = function(n) { minnowsEaten += (n || 50); };
+window.giveBurger = function() { hasBurger = true; burgerTimer = BURGER_DURATION; };
+window.getFoxes = function() { return foxes.map(f => ({ x: Math.round(f.x), facing: f.facing, state: f.state })); };
+window.render_game_to_text = function() {
+  return JSON.stringify({
+    state: ['MENU', 'PLAYING', 'GAMEOVER', 'PAUSED', 'SHOP'][gameState],
+    player: { x: Math.round(player.x), y: Math.round(player.y), vx: Math.round(player.vx), vy: Math.round(player.vy), grounded: player.grounded, attacking: player.attacking },
+    camera: { x: Math.round(camera.x) },
+    score, lives, comboCount,
+    enemiesAlive: enemies.filter(e => e.alive).length,
+    collectiblesLeft: collectibles.filter(c => !c.collected).length,
+    difficulty: Math.round(difficulty * 10) / 10,
+    powerups: {
+      stamina: Math.round(stamina),
+      jumpBoost: jumpBoostLevel,
+      speedBoost: speedBoostLevel,
+      sizeBoost: sizeBoostLevel,
+      watermelonsEaten, minnowsEaten, catsKilled, pigeonsKilled,
+      kickMode: kickModeTimer > 0,
+      kickTimer: Math.round(kickModeTimer * 10) / 10,
+      fartMode: fartModeTimer > 0,
+      fartTimer: Math.round(fartModeTimer * 10) / 10,
+      chickenActive: !!chicken,
+      isNapping,
+      dogBeds: dogBeds.length,
+      hasFries, friesTimer: Math.round(friesTimer * 10) / 10,
+      hasBurger, burgerTimer: Math.round(burgerTimer * 10) / 10,
+      shakeSpeed: shakeSpeedTimer > 0,
+      shakeTimer: Math.round(shakeSpeedTimer * 10) / 10,
+      availableMinnows: minnowsEaten - minnowsSpent,
+      peePuddles: peePuddles.length
+    }
+  });
+};
+
+
+window.advanceTime = function(ms) {
+  const steps = Math.max(1, Math.round(ms / (1000 / 60)));
+  for (let i = 0; i < steps; i++) {
+    if (gameState === STATE.PLAYING) updateGame(1 / 60);
+  }
+  render(performance.now() / 1000);
+};
+
+// ─── INIT ───
+requestAnimationFrame(gameLoop);
+
+})();
+
+</script>
+</body>
+</html>
