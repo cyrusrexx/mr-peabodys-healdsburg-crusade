@@ -416,6 +416,7 @@ let audioCtx;
 function initAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   audioCtx.resume();
+  unlockMusic(); // warm up bgMusic element in user gesture for Chrome mobile
   updateMusic();
 }
 
@@ -448,9 +449,37 @@ function playShopBuy() { playSFX(523, 0.08, 'sine', 0.12); setTimeout(() => play
 
 // ─── MUSIC SYSTEM (MP3 song) ───
 let musicPlaying = false;
+let musicUnlocked = false; // Chrome mobile needs audio unlocked in user gesture
 const bgMusic = new Audio('peabody-crusade.mp3');
 bgMusic.loop = true;
 bgMusic.volume = 0.35;
+bgMusic.preload = 'auto';
+
+// Unlock audio for Chrome mobile: must call play() inside a user gesture
+// even if we immediately pause. This "warms up" the element so future
+// play() calls from non-gesture contexts (game loop) will work.
+function unlockMusic() {
+  if (musicUnlocked) return;
+  musicUnlocked = true;
+  // Start playback muted briefly to unlock, then restore volume
+  const origVol = bgMusic.volume;
+  bgMusic.volume = 0;
+  const p = bgMusic.play();
+  if (p && p.then) {
+    p.then(() => {
+      bgMusic.pause();
+      bgMusic.currentTime = 0;
+      bgMusic.volume = origVol;
+    }).catch(() => {
+      bgMusic.volume = origVol;
+      musicUnlocked = false; // retry on next gesture
+    });
+  } else {
+    bgMusic.pause();
+    bgMusic.currentTime = 0;
+    bgMusic.volume = origVol;
+  }
+}
 
 function updateMusic() {
   if (gameState === STATE.PLAYING || gameState === STATE.SHOP) {
@@ -561,6 +590,7 @@ function initTouchControls() {
 
   container.addEventListener('touchstart', (e) => {
     e.preventDefault();
+    initAudio(); // unlock audio on any touch control tap (Chrome mobile)
     for (const touch of e.changedTouches) {
       const el = document.elementFromPoint(touch.clientX, touch.clientY);
       const action = actionFromEl(el);
@@ -621,9 +651,10 @@ function initTouchControls() {
 canvas.addEventListener('touchstart', (e) => {
   e.preventDefault();
   initAudio();
-  // If on menu or game over, tapping the canvas starts/restarts
+  // If on menu or game over, start game directly from user gesture
+  // so bgMusic.play() is called within the gesture context (Chrome mobile fix)
   if (gameState === STATE.MENU || gameState === STATE.GAMEOVER) {
-    startGameRequested = true;
+    startGame();
   }
 }, { passive: false });
 canvas.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
@@ -717,6 +748,13 @@ const TRASH_CAN_COUNT = 25;
 let canFly = false;
 let flyTimer = 0;
 const FLY_DURATION = 30;
+
+// ─── MORTY CAMEO (one-time event) ───
+let morty = null;          // Morty object or null
+let mortyTriggered = false; // true once Morty has appeared (prevents re-spawn)
+const MORTY_SPAWN_X = 5000; // world x where Morty appears
+const MORTY_INVINCIBLE_DURATION = 5; // seconds of invincibility
+let mortySparkles = [];    // sparkle particles for Morty effect
 
 // ─── CAMERA ───
 const camera = { x: 0, y: 0, smoothing: 0.08 };
@@ -2724,6 +2762,359 @@ function drawFox(fox, camX, time) {
   ctx.restore();
 }
 
+// ─── DRAW MORTY (fluffy black-and-white border collie / Great Pyrenees mix) ───
+function drawMorty(camX, time) {
+  if (!morty) return;
+  const sx = morty.x - camX;
+  if (sx < -120 || sx > GAME_W + 120) return;
+
+  ctx.save();
+  ctx.translate(sx, morty.y);
+  if (morty.facing < 0) ctx.scale(-1, 1);
+
+  const legPhase = morty.state === 'running' ? Math.sin(time * 10 + morty.anim) * 6 : 0;
+  const breathe = Math.sin(time * 3) * 1.5;
+  const tailWag = Math.sin(time * (morty.state === 'sniffing' ? 12 : 5)) * (morty.state === 'sniffing' ? 15 : 8);
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.beginPath();
+  ctx.ellipse(0, 2, 30, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // === LEGS (4 legs, white with black spots) ===
+  ctx.fillStyle = '#F0EDE8';
+  // Back legs
+  ctx.fillRect(-20, -18, 7, 18 + legPhase);
+  ctx.fillRect(-10, -18, 7, 18 - legPhase);
+  // Front legs
+  ctx.fillRect(10, -18, 7, 18 - legPhase);
+  ctx.fillRect(20, -18, 7, 18 + legPhase);
+  // Black speckles on legs
+  ctx.fillStyle = '#2A2A2A';
+  ctx.fillRect(-19, -10, 3, 3);
+  ctx.fillRect(12, -12, 3, 3);
+  // White paws
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(-21, -1, 9, 3);
+  ctx.fillRect(-11, -1, 9, 3);
+  ctx.fillRect(9, -1, 9, 3);
+  ctx.fillRect(19, -1, 9, 3);
+
+  // === BODY (large, fluffy, white-gray with black patches) ===
+  // Main body
+  ctx.fillStyle = '#E8E3DC';
+  ctx.beginPath();
+  ctx.ellipse(0, -30 + breathe, 30, 18, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Fluffy chest (white)
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath();
+  ctx.ellipse(12, -26, 12, 10, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Black back patch
+  ctx.fillStyle = '#2A2A2A';
+  ctx.beginPath();
+  ctx.ellipse(-6, -38 + breathe, 14, 8, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Gray speckles on body
+  ctx.fillStyle = '#9E9A94';
+  ctx.beginPath();
+  ctx.arc(-14, -24, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(6, -20, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Fur texture lines (fluffy effect)
+  ctx.strokeStyle = '#D4CFC7';
+  ctx.lineWidth = 0.8;
+  for (let i = 0; i < 6; i++) {
+    const fx = -18 + i * 7;
+    const fy = -22 + Math.sin(i * 1.5 + time * 2) * 2;
+    ctx.beginPath();
+    ctx.moveTo(fx, fy);
+    ctx.lineTo(fx + 3, fy - 5);
+    ctx.stroke();
+  }
+
+  // === TAIL (bushy, fluffy, wagging) ===
+  ctx.fillStyle = '#E0DBD3';
+  ctx.beginPath();
+  ctx.moveTo(-28, -30);
+  ctx.quadraticCurveTo(-40, -50 + tailWag, -48, -46 + tailWag);
+  ctx.lineTo(-44, -40 + tailWag);
+  ctx.quadraticCurveTo(-36, -44 + tailWag, -28, -26);
+  ctx.fill();
+  // White tail fluff
+  ctx.fillStyle = '#FFF';
+  ctx.beginPath();
+  ctx.arc(-46, -43 + tailWag, 5, 0, Math.PI * 2);
+  ctx.fill();
+  // Black tip
+  ctx.fillStyle = '#2A2A2A';
+  ctx.beginPath();
+  ctx.arc(-48, -45 + tailWag, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // === HEAD (black with white blaze) ===
+  // Main head shape (black)
+  ctx.fillStyle = '#1E1E1E';
+  ctx.beginPath();
+  ctx.ellipse(30, -38, 14, 13, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // White blaze down center of face
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath();
+  ctx.moveTo(30, -50);
+  ctx.quadraticCurveTo(34, -40, 33, -30);
+  ctx.lineTo(27, -30);
+  ctx.quadraticCurveTo(26, -40, 30, -50);
+  ctx.fill();
+
+  // Snout (dark gray)
+  ctx.fillStyle = '#3A3A3A';
+  ctx.beginPath();
+  ctx.ellipse(38, -33, 8, 6, 0.1, 0, Math.PI * 2);
+  ctx.fill();
+  // White muzzle
+  ctx.fillStyle = '#F5F5F5';
+  ctx.beginPath();
+  ctx.ellipse(38, -31, 6, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Nose
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.ellipse(43, -33, 3, 2.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Mouth (when sniffing, open slightly)
+  if (morty.state === 'sniffing') {
+    ctx.fillStyle = '#D4635A';
+    ctx.beginPath();
+    ctx.ellipse(40, -28, 4, 2.5 + Math.sin(time * 8) * 1, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Tongue
+    ctx.fillStyle = '#F08080';
+    ctx.beginPath();
+    ctx.ellipse(42, -26, 2.5, 4, 0.3, 0, Math.PI);
+    ctx.fill();
+  }
+
+  // === EARS (floppy, black) ===
+  ctx.fillStyle = '#1E1E1E';
+  // Left ear
+  ctx.beginPath();
+  ctx.moveTo(22, -46);
+  ctx.quadraticCurveTo(16, -52, 14, -42);
+  ctx.quadraticCurveTo(16, -44, 22, -42);
+  ctx.fill();
+  // Right ear
+  ctx.beginPath();
+  ctx.moveTo(34, -48);
+  ctx.quadraticCurveTo(40, -56, 42, -44);
+  ctx.quadraticCurveTo(40, -46, 34, -44);
+  ctx.fill();
+
+  // === EYES (warm, friendly) ===
+  // Left eye
+  ctx.fillStyle = '#FFF';
+  ctx.beginPath();
+  ctx.arc(26, -40, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#3D2B1F';
+  ctx.beginPath();
+  ctx.arc(26, -40, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.arc(26, -40, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#FFF';
+  ctx.beginPath();
+  ctx.arc(27, -41, 0.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Right eye
+  ctx.fillStyle = '#FFF';
+  ctx.beginPath();
+  ctx.arc(34, -40, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#3D2B1F';
+  ctx.beginPath();
+  ctx.arc(34, -40, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.arc(34, -40, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#FFF';
+  ctx.beginPath();
+  ctx.arc(35, -41, 0.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Sniffing nose wiggle animation
+  if (morty.state === 'sniffing') {
+    const wiggle = Math.sin(time * 15) * 2;
+    ctx.fillStyle = 'rgba(255,255,200,0.4)';
+    ctx.beginPath();
+    ctx.arc(45 + wiggle, -33, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+
+  // === "MORTY!" LABEL above him ===
+  ctx.save();
+  ctx.font = 'bold 16px Bangers, cursive';
+  ctx.textAlign = 'center';
+  const labelBob = Math.sin(time * 4) * 3;
+  // Outline
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 3;
+  ctx.strokeText('MORTY!', sx, morty.y - 62 + labelBob);
+  // Fill with gold
+  ctx.fillStyle = '#FFD700';
+  ctx.fillText('MORTY!', sx, morty.y - 62 + labelBob);
+  ctx.textAlign = 'left';
+  ctx.restore();
+
+  // === INVINCIBILITY SPARKLE AURA (when Morty triggers invincibility) ===
+  if (morty.state === 'done') {
+    // Draw sparkle ring around the player position
+    for (let i = 0; i < mortySparkles.length; i++) {
+      const sp = mortySparkles[i];
+      if (sp.life <= 0) continue;
+      const alpha = sp.life / sp.maxLife;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = sp.color;
+      const sz = sp.size * alpha;
+      ctx.beginPath();
+      ctx.arc(sp.x - camX, sp.y, sz, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ─── UPDATE MORTY ───
+function updateMorty(dt) {
+  // Check spawn condition: player passes MORTY_SPAWN_X for the first time
+  if (!mortyTriggered && player.x >= MORTY_SPAWN_X) {
+    mortyTriggered = true;
+    // Spawn Morty off-screen to the right, he will run toward player
+    morty = {
+      x: player.x + 600,
+      y: GROUND_Y,
+      facing: -1,  // facing left toward player
+      vx: 0,
+      anim: 0,
+      state: 'running', // running | sniffing | leaving | done
+      timer: 0,
+      sniffDuration: 2.0, // how long he sniffs
+      hasGrantedInvincibility: false
+    };
+    addFloatingText(player.x + 200, GROUND_Y - 100, 'WHO\'S THAT?!', '#FFD700');
+  }
+
+  if (!morty || morty.state === 'done') return;
+
+  morty.anim += dt;
+
+  if (morty.state === 'running') {
+    // Run toward the player's butt (behind the player)
+    const targetX = player.x - player.facing * 30; // behind the player
+    const dx = targetX - morty.x;
+    morty.facing = dx > 0 ? 1 : -1;
+    const speed = 400; // faster than the player
+    morty.vx = Math.sign(dx) * Math.min(speed, Math.abs(dx) * 3);
+    morty.x += morty.vx * dt;
+
+    // Close enough? Start sniffing
+    if (Math.abs(morty.x - targetX) < 20) {
+      morty.state = 'sniffing';
+      morty.timer = 0;
+      morty.facing = player.facing; // face same direction as Peabody (nose to butt)
+      addFloatingText(morty.x, morty.y - 60, '*sniff sniff*', '#FFA500');
+    }
+  }
+
+  if (morty.state === 'sniffing') {
+    morty.timer += dt;
+    // Stay close to player's butt
+    morty.x = player.x - player.facing * 30;
+    morty.facing = player.facing;
+
+    // Spawn sniff particles
+    if (Math.random() < 0.3) {
+      mortySparkles.push({
+        x: morty.x + morty.facing * 40,
+        y: morty.y - 20 + (Math.random() - 0.5) * 10,
+        size: 3 + Math.random() * 3,
+        color: Math.random() > 0.5 ? '#FFD700' : '#FFA500',
+        life: 0.6,
+        maxLife: 0.6,
+        vx: (Math.random() - 0.5) * 30,
+        vy: -20 - Math.random() * 30
+      });
+    }
+
+    if (morty.timer >= morty.sniffDuration && !morty.hasGrantedInvincibility) {
+      // Grant invincibility!
+      morty.hasGrantedInvincibility = true;
+      invincibleTimer = MORTY_INVINCIBLE_DURATION;
+      addFloatingText(player.x, player.y - 80, 'MORTY POWER!', '#FFD700');
+      addFloatingText(player.x, player.y - 100, '5s INVINCIBLE!', '#FFF');
+      spawnParticles(player.x, player.y - 30, '#FFD700', 25, 250, 250);
+      spawnParticles(player.x, player.y - 30, '#FFF', 15, 200, 200);
+      screenShake = 0.2;
+      // Big sparkle burst
+      for (let i = 0; i < 20; i++) {
+        const angle = (Math.PI * 2 / 20) * i;
+        mortySparkles.push({
+          x: player.x + Math.cos(angle) * 40,
+          y: player.y - 30 + Math.sin(angle) * 30,
+          size: 4 + Math.random() * 4,
+          color: ['#FFD700', '#FFF', '#87CEEB', '#FFB6C1'][Math.floor(Math.random() * 4)],
+          life: 1.5,
+          maxLife: 1.5,
+          vx: Math.cos(angle) * 80,
+          vy: Math.sin(angle) * 60 - 40
+        });
+      }
+      morty.state = 'leaving';
+      morty.timer = 0;
+    }
+  }
+
+  if (morty.state === 'leaving') {
+    morty.timer += dt;
+    // Run off to the right
+    morty.facing = 1;
+    morty.x += 350 * dt;
+
+    // After running far enough or 4 seconds, mark as done
+    if (morty.timer > 4 || morty.x > player.x + 800) {
+      morty.state = 'done';
+    }
+  }
+
+  // Update sparkles
+  for (let i = mortySparkles.length - 1; i >= 0; i--) {
+    const sp = mortySparkles[i];
+    sp.life -= dt;
+    sp.x += (sp.vx || 0) * dt;
+    sp.y += (sp.vy || 0) * dt;
+    if (sp.vy) sp.vy += 50 * dt; // slight gravity
+    if (sp.life <= 0) mortySparkles.splice(i, 1);
+  }
+}
+
 // ─── DRAW RACCOON ───
 function drawRaccoon(rac, camX, time) {
   const sx = rac.x - camX;
@@ -3096,6 +3487,7 @@ function drawMenu(time) {
   ctx.fillText("\uD83C\uDF54 Iggy's Burgers — spend minnows on food", rightCol, guideTop + 96);
   ctx.fillText('\uD83C\uDF5F Fries = bark power  |  \uD83C\uDF54 Burger = pee attack', rightCol, guideTop + 112);
   ctx.fillText('\uD83D\uDDD1 Eat from trash cans to fly!', rightCol, guideTop + 128);
+  ctx.fillText('\uD83D\uDC36 Watch for Morty — he gives invincibility!', rightCol, guideTop + 144);
 
   ctx.restore();
 }
@@ -3783,9 +4175,10 @@ function updateGame(dt) {
     }
   }
 
-  // ─── UPDATE FOXES & RACCOONS ───
+  // ─── UPDATE FOXES, RACCOONS & MORTY ───
   updateFoxes(dt);
   updateRaccoons(dt);
+  updateMorty(dt);
 
   // ─── TRASH FOOD PICKUP → FLIGHT POWER ───
   trashCans.forEach(tc => {
@@ -3990,6 +4383,9 @@ function render(time) {
       drawRaccoon(r, camX, time);
     }
 
+    // Morty cameo
+    drawMorty(camX, time);
+
     // Chicken
     drawChicken(camX, time);
 
@@ -4116,7 +4512,7 @@ function startGame() {
   isNapping = false;
   napTimer = 0;
   napBubble = 0;
-  // Reset music
+  // Reset & start music (play() here so it runs within user gesture on Chrome mobile)
   bgMusic.currentTime = 0;
   musicPlaying = false;
   // Reset burger shop state
@@ -4135,6 +4531,10 @@ function startGame() {
   trashCans = [];
   canFly = false;
   flyTimer = 0;
+  // Reset Morty cameo
+  morty = null;
+  mortyTriggered = false;
+  mortySparkles = [];
   // Hide exit shop button
   var exitBtn = document.getElementById('exit-shop-btn');
   if (exitBtn) exitBtn.style.display = 'none';
@@ -4150,6 +4550,8 @@ function startGame() {
   camera.x = 0;
   generateWorld();
   gameState = STATE.PLAYING;
+  // Start music immediately — must happen inside user gesture for Chrome mobile
+  updateMusic();
 }
 
 // ─── INPUT HANDLERS ───
@@ -4188,6 +4590,8 @@ window.teleportPlayer = function(x) { player.x = x; player.vx = 0; };
 window.giveMinnows = function(n) { minnowsEaten += (n || 50); };
 window.giveBurger = function() { hasBurger = true; burgerTimer = BURGER_DURATION; };
 window.getFoxes = function() { return foxes.map(f => ({ x: Math.round(f.x), facing: f.facing, state: f.state })); };
+window.getMorty = function() { return morty ? { x: Math.round(morty.x), state: morty.state, facing: morty.facing, triggered: mortyTriggered } : { triggered: mortyTriggered }; };
+window.spawnMorty = function() { mortyTriggered = false; morty = null; player.x = MORTY_SPAWN_X - 50; };
 window.render_game_to_text = function() {
   return JSON.stringify({
     state: ['MENU', 'PLAYING', 'GAMEOVER', 'PAUSED', 'SHOP'][gameState],
