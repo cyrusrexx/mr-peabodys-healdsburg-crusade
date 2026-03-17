@@ -653,7 +653,7 @@ canvas.addEventListener('touchstart', (e) => {
   initAudio();
   // If on menu or game over, start game directly from user gesture
   // so bgMusic.play() is called within the gesture context (Chrome mobile fix)
-  if (gameState === STATE.MENU || gameState === STATE.GAMEOVER) {
+  if (gameState === STATE.MENU || gameState === STATE.GAMEOVER || (gameState === STATE.WIN && winAnimPhase === 2 && winAnimTimer > 3)) {
     startGame();
   }
 }, { passive: false });
@@ -682,7 +682,7 @@ if (document.readyState !== 'loading') initTouchControls();
 })();
 
 // ─── GAME STATE ───
-const STATE = { MENU: 0, PLAYING: 1, GAMEOVER: 2, PAUSED: 3, SHOP: 4 };
+const STATE = { MENU: 0, PLAYING: 1, GAMEOVER: 2, PAUSED: 3, SHOP: 4, WIN: 5 };
 let gameState = STATE.MENU;
 let startGameRequested = false;
 let score = 0;
@@ -760,6 +760,13 @@ let mortySparkles = [];    // sparkle particles for Morty effect
 const camera = { x: 0, y: 0, smoothing: 0.08 };
 const WORLD_W = 24000;
 const GROUND_Y = GAME_H - 120;
+
+// ─── JESSICA (win condition at end of world) ───
+const JESSICA_X = WORLD_W - 400; // Jessica waits near end of world
+let jessica = { x: JESSICA_X, y: GROUND_Y, reached: false };
+let winAnimTimer = 0;      // animation timer for win sequence
+let winAnimPhase = 0;      // 0=running to her, 1=jump into arms, 2=show victory
+let winHearts = [];        // heart particles for win
 
 // ─── COLORS ───
 const SKY_TOP = '#87CEEB';
@@ -1123,8 +1130,8 @@ function generateWorld() {
   chicken = null;
   fartClouds = [];
 
-  // Generate enemies — plenty of cats and pigeons for power-up triggers
-  for (let i = 0; i < 140; i++) {
+  // Generate enemies — 20% fewer cats and pigeons for a calmer experience
+  for (let i = 0; i < 112; i++) {
     const ex = 400 + rand(0, WORLD_W - 500);
     const type = Math.random() > 0.5 ? 'cat' : 'pigeon';
     enemies.push({
@@ -1202,7 +1209,7 @@ const player = {
 
 const GRAVITY = 1800;
 const JUMP_VEL = -620;
-const RUN_SPEED = 340;
+const RUN_SPEED = 306; // 10% slower (was 340)
 const FRICTION = 0.88;
 const ATTACK_DURATION = 0.25;
 const ATTACK_COOLDOWN = 0.35;
@@ -3115,6 +3122,369 @@ function updateMorty(dt) {
   }
 }
 
+// ─── JESSICA (win condition) ───
+function drawJessica(camX, time) {
+  const sx = jessica.x - camX;
+  if (sx < -100 || sx > GAME_W + 100) return;
+  const sy = jessica.y;
+  ctx.save();
+  ctx.translate(sx, sy);
+
+  // Jessica is kneeling, facing left (toward the player)
+  // She's in black clothes with a yellow beanie, dark wavy hair, tattoos
+
+  const breathe = Math.sin(time * 2) * 1.5;
+  const armWave = jessica.reached ? 0 : Math.sin(time * 3) * 5; // wave arms when waiting
+
+  // ── Kneeling legs (black leggings) ──
+  // Left leg (tucked under)
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath();
+  ctx.ellipse(-8, -6, 14, 7, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  // Right leg (knee forward)
+  ctx.beginPath();
+  ctx.ellipse(10, -8, 12, 8, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  // Right shin/foot extending forward
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.moveTo(18, -4);
+  ctx.quadraticCurveTo(28, -2, 30, 0);
+  ctx.quadraticCurveTo(28, 2, 18, 0);
+  ctx.fill();
+  // Boot
+  ctx.fillStyle = '#222';
+  ctx.fillRect(26, -3, 10, 5);
+  ctx.fillRect(25, 2, 12, 3);
+
+  // ── Torso (black hoodie/jacket) ──
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath();
+  ctx.moveTo(-12, -14 + breathe);
+  ctx.quadraticCurveTo(-16, -40 + breathe, -10, -55 + breathe);
+  ctx.lineTo(10, -55 + breathe);
+  ctx.quadraticCurveTo(16, -40 + breathe, 12, -14 + breathe);
+  ctx.closePath();
+  ctx.fill();
+
+  // Jacket details — zipper line
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, -52 + breathe);
+  ctx.lineTo(0, -16 + breathe);
+  ctx.stroke();
+
+  // ── Arms (reaching out to Peabody) ──
+  ctx.fillStyle = '#1a1a1a';
+  // Left arm — extended forward
+  ctx.save();
+  ctx.translate(-10, -48 + breathe);
+  ctx.rotate(-0.6 + armWave * 0.01);
+  ctx.fillRect(-4, 0, 8, 26);
+  // Hand (fair skin with tattoos)
+  ctx.fillStyle = '#E8C4A0';
+  ctx.beginPath();
+  ctx.arc(0, 28, 5, 0, Math.PI * 2);
+  ctx.fill();
+  // Tattoo marks on hand
+  ctx.fillStyle = '#3a5a3a';
+  ctx.fillRect(-3, 24, 2, 3);
+  ctx.fillRect(1, 25, 2, 2);
+  ctx.restore();
+
+  // Right arm — extended forward
+  ctx.save();
+  ctx.fillStyle = '#1a1a1a';
+  ctx.translate(10, -48 + breathe);
+  ctx.rotate(0.6 - armWave * 0.01);
+  ctx.fillRect(-4, 0, 8, 26);
+  // Hand
+  ctx.fillStyle = '#E8C4A0';
+  ctx.beginPath();
+  ctx.arc(0, 28, 5, 0, Math.PI * 2);
+  ctx.fill();
+  // Tattoo marks on hand
+  ctx.fillStyle = '#3a5a3a';
+  ctx.fillRect(-2, 24, 2, 3);
+  ctx.fillRect(2, 25, 2, 2);
+  ctx.restore();
+
+  // ── Neck with colorful tattoos ──
+  ctx.fillStyle = '#E8C4A0';
+  ctx.fillRect(-5, -58 + breathe, 10, 8);
+  // Neck tattoo (colorful elaborate design)
+  ctx.fillStyle = '#2277AA';
+  ctx.fillRect(-4, -56 + breathe, 3, 3);
+  ctx.fillStyle = '#CC4444';
+  ctx.fillRect(1, -55 + breathe, 3, 3);
+  ctx.fillStyle = '#44AA44';
+  ctx.fillRect(-2, -53 + breathe, 4, 2);
+
+  // ── Head ──
+  ctx.fillStyle = '#E8C4A0';
+  ctx.beginPath();
+  ctx.ellipse(0, -68 + breathe, 11, 13, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Small face tattoos — moon/cross near eye
+  ctx.fillStyle = '#667';
+  ctx.font = '5px serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('+', -7, -71 + breathe);
+  ctx.fillText('☽', 8, -72 + breathe);
+
+  // Eyes
+  ctx.fillStyle = '#5C4033';
+  ctx.beginPath();
+  ctx.ellipse(-4, -70 + breathe, 2, 2.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(4, -70 + breathe, 2, 2.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Pupils
+  ctx.fillStyle = '#222';
+  ctx.beginPath();
+  ctx.arc(-4, -70 + breathe, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(4, -70 + breathe, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyebrows
+  ctx.strokeStyle = '#3a2a1a';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(-7, -74 + breathe);
+  ctx.quadraticCurveTo(-4, -76 + breathe, -1, -74 + breathe);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(1, -74 + breathe);
+  ctx.quadraticCurveTo(4, -76 + breathe, 7, -74 + breathe);
+  ctx.stroke();
+
+  // Nose
+  ctx.strokeStyle = '#C4A080';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, -69 + breathe);
+  ctx.lineTo(-1, -65 + breathe);
+  ctx.stroke();
+
+  // Mouth (slight smile)
+  ctx.strokeStyle = '#B07070';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(-4, -62 + breathe);
+  ctx.quadraticCurveTo(0, -60 + breathe, 4, -62 + breathe);
+  ctx.stroke();
+
+  // ── Hair — dark brown, wavy, with bangs ──
+  ctx.fillStyle = '#3a2a1a';
+  // Bangs across forehead
+  ctx.beginPath();
+  ctx.moveTo(-12, -76 + breathe);
+  ctx.quadraticCurveTo(-8, -82 + breathe, -3, -78 + breathe);
+  ctx.quadraticCurveTo(0, -82 + breathe, 3, -78 + breathe);
+  ctx.quadraticCurveTo(6, -82 + breathe, 9, -78 + breathe);
+  ctx.quadraticCurveTo(12, -82 + breathe, 12, -76 + breathe);
+  ctx.lineTo(12, -73 + breathe);
+  ctx.lineTo(-12, -73 + breathe);
+  ctx.closePath();
+  ctx.fill();
+
+  // Long wavy hair falling down sides
+  // Left side
+  ctx.beginPath();
+  ctx.moveTo(-11, -76 + breathe);
+  ctx.quadraticCurveTo(-16, -60 + breathe, -14, -45 + breathe);
+  ctx.quadraticCurveTo(-12, -35 + breathe, -15, -25 + breathe);
+  ctx.lineTo(-10, -25 + breathe);
+  ctx.quadraticCurveTo(-8, -40 + breathe, -10, -55 + breathe);
+  ctx.quadraticCurveTo(-9, -70 + breathe, -11, -76 + breathe);
+  ctx.fill();
+  // Right side
+  ctx.beginPath();
+  ctx.moveTo(11, -76 + breathe);
+  ctx.quadraticCurveTo(16, -60 + breathe, 14, -45 + breathe);
+  ctx.quadraticCurveTo(12, -35 + breathe, 15, -25 + breathe);
+  ctx.lineTo(10, -25 + breathe);
+  ctx.quadraticCurveTo(8, -40 + breathe, 10, -55 + breathe);
+  ctx.quadraticCurveTo(9, -70 + breathe, 11, -76 + breathe);
+  ctx.fill();
+
+  // ── Yellow Beanie ──
+  ctx.fillStyle = '#E8B000';
+  ctx.beginPath();
+  ctx.moveTo(-13, -76 + breathe);
+  ctx.quadraticCurveTo(-14, -90 + breathe, 0, -93 + breathe);
+  ctx.quadraticCurveTo(14, -90 + breathe, 13, -76 + breathe);
+  ctx.lineTo(13, -74 + breathe);
+  ctx.lineTo(-13, -74 + breathe);
+  ctx.closePath();
+  ctx.fill();
+  // Beanie fold/cuff
+  ctx.fillStyle = '#D0A000';
+  ctx.fillRect(-13, -77 + breathe, 26, 5);
+  // Beanie ribbing lines
+  ctx.strokeStyle = '#C89800';
+  ctx.lineWidth = 0.8;
+  for (let i = -10; i <= 10; i += 4) {
+    ctx.beginPath();
+    ctx.moveTo(i, -77 + breathe);
+    ctx.quadraticCurveTo(i, -86 + breathe, i * 0.7, -91 + breathe);
+    ctx.stroke();
+  }
+
+  // ── "JESSICA" floating text above when not yet reached ──
+  if (!jessica.reached) {
+    const bobY = Math.sin(time * 2) * 4;
+    ctx.font = '700 14px Bangers, cursive';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#FFD700';
+    ctx.fillText('JESSICA!', 0, -100 + bobY + breathe);
+    // Heart above name
+    ctx.fillStyle = '#FF6B9D';
+    ctx.font = '16px serif';
+    ctx.fillText('♥', 0, -115 + bobY + breathe);
+  }
+
+  ctx.restore();
+  ctx.textAlign = 'left';
+}
+
+// ─── WIN ANIMATION UPDATE ───
+function updateWinAnimation(dt) {
+  winAnimTimer += dt;
+
+  if (winAnimPhase === 0) {
+    // Phase 0: Peabody auto-runs toward Jessica
+    const dx = jessica.x - player.x;
+    if (Math.abs(dx) > 30) {
+      player.vx = dx > 0 ? 250 : -250;
+      player.facing = dx > 0 ? 1 : -1;
+    } else {
+      // Close enough — jump!
+      winAnimPhase = 1;
+      winAnimTimer = 0;
+      player.vy = -500;
+      player.grounded = false;
+      player.vx = 0;
+    }
+    // Gravity still applies
+    player.vy += GRAVITY * dt;
+    player.y += player.vy * dt;
+    if (player.y >= GROUND_Y) {
+      player.y = GROUND_Y;
+      player.vy = 0;
+      player.grounded = true;
+    }
+    player.x += player.vx * dt;
+  } else if (winAnimPhase === 1) {
+    // Phase 1: Jump arc into Jessica's arms
+    player.vy += GRAVITY * dt;
+    player.y += player.vy * dt;
+    player.x += (jessica.x - player.x) * 3 * dt; // home in on Jessica
+    if (player.y >= jessica.y - 35) {
+      // Landed in her arms
+      player.y = jessica.y - 35;
+      player.vy = 0;
+      player.x = jessica.x;
+      winAnimPhase = 2;
+      winAnimTimer = 0;
+      jessica.reached = true;
+      // Burst of hearts
+      for (let i = 0; i < 20; i++) {
+        winHearts.push({
+          x: jessica.x, y: jessica.y - 50,
+          vx: (Math.random() - 0.5) * 200,
+          vy: -100 - Math.random() * 200,
+          life: 1.5 + Math.random() * 1.5,
+          size: 10 + Math.random() * 15
+        });
+      }
+    }
+  } else if (winAnimPhase === 2) {
+    // Phase 2: Celebration — show hearts, then victory screen
+    // Update heart particles
+    for (let i = winHearts.length - 1; i >= 0; i--) {
+      const h = winHearts[i];
+      h.x += h.vx * dt;
+      h.vy += 80 * dt;
+      h.y += h.vy * dt;
+      h.life -= dt;
+      if (h.life <= 0) winHearts.splice(i, 1);
+    }
+    // Spawn new hearts occasionally
+    if (winAnimTimer < 3 && Math.random() < 0.15) {
+      winHearts.push({
+        x: jessica.x + (Math.random() - 0.5) * 60,
+        y: jessica.y - 40 - Math.random() * 30,
+        vx: (Math.random() - 0.5) * 80,
+        vy: -60 - Math.random() * 100,
+        life: 1 + Math.random() * 1,
+        size: 8 + Math.random() * 12
+      });
+    }
+  }
+
+  // Camera follows player during win
+  const targetCamX = player.x - GAME_W / 2;
+  camera.x = lerp(camera.x, clamp(targetCamX, 0, WORLD_W - GAME_W), camera.smoothing);
+}
+
+// ─── DRAW WIN SCREEN ───
+function drawWinScreen(time) {
+  // Semi-transparent golden overlay
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(0, 0, GAME_W, GAME_H);
+
+  // Golden glow at center
+  const grad = ctx.createRadialGradient(GAME_W/2, GAME_H/2 - 40, 0, GAME_W/2, GAME_H/2 - 40, 300);
+  grad.addColorStop(0, 'rgba(255,215,0,0.2)');
+  grad.addColorStop(1, 'rgba(255,215,0,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, GAME_W, GAME_H);
+
+  ctx.textAlign = 'center';
+
+  // "YOU WIN!" with golden bounce
+  const bounce = Math.sin(time * 4) * 5;
+  ctx.font = '700 72px Bangers, cursive';
+  ctx.fillStyle = '#FFD700';
+  ctx.strokeStyle = '#8B6914';
+  ctx.lineWidth = 3;
+  ctx.strokeText('PEABODY FOUND JESSICA!', GAME_W / 2, GAME_H / 2 - 60 + bounce);
+  ctx.fillText('PEABODY FOUND JESSICA!', GAME_W / 2, GAME_H / 2 - 60 + bounce);
+
+  // Score
+  ctx.font = '700 28px Inter, sans-serif';
+  ctx.fillStyle = '#FFF';
+  ctx.fillText(`Final Score: ${score}`, GAME_W / 2, GAME_H / 2 + 10);
+
+  // Stats
+  ctx.font = '600 18px Inter, sans-serif';
+  ctx.fillStyle = '#FFD700';
+  ctx.fillText(`🍉 ${watermelonsEaten} Watermelons  ·  🐟 ${minnowsEaten} Minnows  ·  🐱 ${catsKilled} Cats  ·  🐦 ${pigeonsKilled} Pigeons`, GAME_W / 2, GAME_H / 2 + 50);
+
+  if (score >= hiScore && score > 0) {
+    ctx.font = '600 22px Bangers, cursive';
+    ctx.fillStyle = '#4CAF50';
+    ctx.fillText('NEW HIGH SCORE!', GAME_W / 2, GAME_H / 2 + 85);
+  }
+
+  // Restart prompt
+  ctx.font = '600 16px Inter, sans-serif';
+  ctx.fillStyle = '#ccc';
+  const blink = Math.sin(time * 3) > 0;
+  if (blink) {
+    ctx.fillText(isMobile ? 'Tap to Play Again' : 'Press SPACE or ENTER to Play Again', GAME_W / 2, GAME_H / 2 + 130);
+  }
+
+  ctx.textAlign = 'left';
+}
+
 // ─── DRAW RACCOON ───
 function drawRaccoon(rac, camX, time) {
   const sx = rac.x - camX;
@@ -3489,6 +3859,14 @@ function drawMenu(time) {
   ctx.fillText('\uD83D\uDDD1 Eat from trash cans to fly!', rightCol, guideTop + 128);
   ctx.fillText('\uD83D\uDC36 Watch for Morty — he gives invincibility!', rightCol, guideTop + 144);
 
+
+  // Goal section
+  ctx.font = 'bold 14px Inter, sans-serif';
+  ctx.fillStyle = '#FF6B9D';
+  ctx.fillText('GOAL', leftCol, guideTop + 140);
+  ctx.font = '400 12px Inter, sans-serif';
+  ctx.fillStyle = '#ddd';
+  ctx.fillText('\u2665 Find Jessica at the end of Healdsburg!', leftCol, guideTop + 158);
   ctx.restore();
 }
 
@@ -3928,13 +4306,13 @@ function updateGame(dt) {
 
     // Patrol
     if (e.type === 'cat') {
-      e.x += e.patrolDir * 60 * difficulty * dt;
+      e.x += e.patrolDir * 54 * difficulty * dt; // 10% slower (was 60)
       if (Math.abs(e.x - e.patrolOrigin) > e.patrolRange) {
         e.patrolDir *= -1;
       }
     } else {
       // Pigeon flies in a pattern
-      e.x += e.patrolDir * 80 * difficulty * dt;
+      e.x += e.patrolDir * 72 * difficulty * dt; // 10% slower (was 80)
       e.y += Math.sin(gameTime * 2 + e.anim) * 30 * dt;
       if (Math.abs(e.x - e.patrolOrigin) > e.patrolRange) {
         e.patrolDir *= -1;
@@ -4180,6 +4558,18 @@ function updateGame(dt) {
   updateRaccoons(dt);
   updateMorty(dt);
 
+  // ─── JESSICA WIN CHECK ───
+  if (!jessica.reached && player.x >= jessica.x - 80) {
+    // Player reached Jessica! Trigger win sequence
+    gameState = STATE.WIN;
+    winAnimPhase = 0;
+    winAnimTimer = 0;
+    winHearts = [];
+    // Stop music fade
+    // Keep score as final
+    if (score > hiScore) hiScore = score;
+  }
+
   // ─── TRASH FOOD PICKUP → FLIGHT POWER ───
   trashCans.forEach(tc => {
     if (tc.knocked && tc.spilledFood && !tc.foodEaten) {
@@ -4287,7 +4677,7 @@ function render(time) {
 
   if (gameState === STATE.MENU) {
     drawMenu(time);
-  } else if (gameState === STATE.PLAYING || gameState === STATE.GAMEOVER) {
+  } else if (gameState === STATE.PLAYING || gameState === STATE.GAMEOVER || gameState === STATE.WIN) {
     const camX = camera.x;
 
     // Sky
@@ -4386,11 +4776,26 @@ function render(time) {
     // Morty cameo
     drawMorty(camX, time);
 
+    // Jessica (win condition at end of world)
+    drawJessica(camX, time);
+
     // Chicken
     drawChicken(camX, time);
 
     // Player
     drawPlayer(camX, time);
+
+    // Win hearts
+    for (const h of winHearts) {
+      const hx = h.x - camX;
+      ctx.globalAlpha = Math.max(0, h.life / 2);
+      ctx.fillStyle = '#FF6B9D';
+      ctx.font = `${Math.round(h.size)}px serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('♥', hx, h.y);
+      ctx.globalAlpha = 1;
+    }
+    ctx.textAlign = 'left';
 
     // Pee puddles
     for (const puddle of peePuddles) {
@@ -4440,6 +4845,9 @@ function render(time) {
     if (gameState === STATE.GAMEOVER) {
       drawGameOver(time);
     }
+    if (gameState === STATE.WIN && winAnimPhase === 2 && winAnimTimer > 2) {
+      drawWinScreen(time);
+    }
   } else if (gameState === STATE.SHOP) {
     drawShopInterior(time);
   }
@@ -4469,13 +4877,16 @@ function gameLoop(timestamp) {
   // Handle deferred start/restart (from touch on canvas)
   if (startGameRequested) {
     startGameRequested = false;
-    if (gameState === STATE.MENU || gameState === STATE.GAMEOVER) {
+    if (gameState === STATE.MENU || gameState === STATE.GAMEOVER || (gameState === STATE.WIN && winAnimPhase === 2 && winAnimTimer > 3)) {
       startGame();
     }
   }
 
   if (gameState === STATE.PLAYING) {
     updateGame(dt);
+  }
+  if (gameState === STATE.WIN) {
+    updateWinAnimation(dt);
   }
   if (gameState === STATE.SHOP) {
     updateShop();
@@ -4535,6 +4946,11 @@ function startGame() {
   morty = null;
   mortyTriggered = false;
   mortySparkles = [];
+  // Reset Jessica / win state
+  jessica = { x: JESSICA_X, y: GROUND_Y, reached: false };
+  winAnimTimer = 0;
+  winAnimPhase = 0;
+  winHearts = [];
   // Hide exit shop button
   var exitBtn = document.getElementById('exit-shop-btn');
   if (exitBtn) exitBtn.style.display = 'none';
@@ -4558,7 +4974,7 @@ function startGame() {
 function handleStart() {
   grabFocus();
   initAudio();
-  if (gameState === STATE.MENU || gameState === STATE.GAMEOVER) {
+  if (gameState === STATE.MENU || gameState === STATE.GAMEOVER || (gameState === STATE.WIN && winAnimPhase === 2 && winAnimTimer > 3)) {
     startGame();
   }
 }
@@ -4592,9 +5008,11 @@ window.giveBurger = function() { hasBurger = true; burgerTimer = BURGER_DURATION
 window.getFoxes = function() { return foxes.map(f => ({ x: Math.round(f.x), facing: f.facing, state: f.state })); };
 window.getMorty = function() { return morty ? { x: Math.round(morty.x), state: morty.state, facing: morty.facing, triggered: mortyTriggered } : { triggered: mortyTriggered }; };
 window.spawnMorty = function() { mortyTriggered = false; morty = null; player.x = MORTY_SPAWN_X - 50; };
+window.getJessica = function() { return { x: jessica.x, reached: jessica.reached, winPhase: winAnimPhase, winTimer: winAnimTimer }; };
+window.goToJessica = function() { player.x = jessica.x - 200; invincibleTimer = 999; };
 window.render_game_to_text = function() {
   return JSON.stringify({
-    state: ['MENU', 'PLAYING', 'GAMEOVER', 'PAUSED', 'SHOP'][gameState],
+    state: ['MENU', 'PLAYING', 'GAMEOVER', 'PAUSED', 'SHOP', 'WIN'][gameState],
     player: { x: Math.round(player.x), y: Math.round(player.y), vx: Math.round(player.vx), vy: Math.round(player.vy), grounded: player.grounded, attacking: player.attacking },
     camera: { x: Math.round(camera.x) },
     score, lives, comboCount,
@@ -4629,6 +5047,7 @@ window.advanceTime = function(ms) {
   const steps = Math.max(1, Math.round(ms / (1000 / 60)));
   for (let i = 0; i < steps; i++) {
     if (gameState === STATE.PLAYING) updateGame(1 / 60);
+    if (gameState === STATE.WIN) updateWinAnimation(1 / 60);
   }
   render(performance.now() / 1000);
 };
