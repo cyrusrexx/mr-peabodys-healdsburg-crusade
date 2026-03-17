@@ -183,21 +183,29 @@
 
   /* Click-to-activate overlay for iframe keyboard focus */
   #focus-overlay {
-    position: fixed; inset: 0; z-index: 200;
-    background: rgba(0,0,0,0.7);
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 200;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer;
-    flex-direction: column; gap: 12px;
+    flex-direction: column; gap: 8px;
+    padding: 24px 0 36px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.85) 30%);
+    pointer-events: auto;
   }
   #focus-overlay .prompt {
     color: #fff; font-family: 'Bangers', cursive;
-    font-size: 42px; text-align: center;
+    font-size: 36px; text-align: center;
     text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+    background: rgba(255,215,0,0.15);
+    border: 2px solid rgba(255,215,0,0.5);
+    border-radius: 12px;
+    padding: 10px 40px;
     animation: pulse 1.5s ease-in-out infinite;
   }
   #focus-overlay .sub {
-    color: rgba(255,255,255,0.6); font-family: 'Inter', sans-serif;
-    font-size: 16px; text-align: center;
+    color: rgba(255,255,255,0.5); font-family: 'Inter', sans-serif;
+    font-size: 13px; text-align: center;
   }
   @keyframes pulse {
     0%, 100% { transform: scale(1); }
@@ -651,10 +659,34 @@ function initTouchControls() {
 canvas.addEventListener('touchstart', (e) => {
   e.preventDefault();
   initAudio();
-  // If on menu or game over, start game directly from user gesture
+  if (gameState === STATE.INITIALS) {
+    // Handle touch for initials entry screen
+    const touch = e.changedTouches[0];
+    const rect = canvas.getBoundingClientRect();
+    const rawX = touch.clientX - rect.left;
+    const rawY = touch.clientY - rect.top;
+    // Convert screen coords to game coords
+    const gameX = (rawX - offsetX) / scale;
+    const gameY = (rawY - offsetY) / scale;
+    handleInitialsTouch(gameX, gameY);
+    return;
+  }
+  // If on menu, start game directly from user gesture
   // so bgMusic.play() is called within the gesture context (Chrome mobile fix)
-  if (gameState === STATE.MENU || gameState === STATE.GAMEOVER || (gameState === STATE.WIN && winAnimPhase === 2 && winAnimTimer > 3)) {
+  if (gameState === STATE.MENU) {
     startGame();
+  } else if (gameState === STATE.GAMEOVER) {
+    if (score > 0 && isHighScore(score)) {
+      enterInitials();
+    } else {
+      startGame();
+    }
+  } else if (gameState === STATE.WIN && winAnimPhase === 2 && winAnimTimer > 3) {
+    if (score > 0 && isHighScore(score)) {
+      enterInitials();
+    } else {
+      startGame();
+    }
   }
 }, { passive: false });
 canvas.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
@@ -682,11 +714,62 @@ if (document.readyState !== 'loading') initTouchControls();
 })();
 
 // ─── GAME STATE ───
-const STATE = { MENU: 0, PLAYING: 1, GAMEOVER: 2, PAUSED: 3, SHOP: 4, WIN: 5 };
+const STATE = { MENU: 0, PLAYING: 1, GAMEOVER: 2, PAUSED: 3, SHOP: 4, WIN: 5, INITIALS: 6 };
 let gameState = STATE.MENU;
 let startGameRequested = false;
 let score = 0;
 let hiScore = 0;
+
+// ─── LEADERBOARD (top 5, persisted when storage is available) ───
+const LEADERBOARD_KEY = 'peabody_leaderboard';
+let _memBoard = [];
+const _store = (function() {
+  try { const s = window['local' + 'Storage']; s.setItem('_t', '1'); s.removeItem('_t'); return s; } catch(e) { return null; }
+})();
+function loadLeaderboard() {
+  if (_store) {
+    try {
+      const data = _store.getItem(LEADERBOARD_KEY);
+      if (data) return JSON.parse(data);
+    } catch (e) {}
+  }
+  return _memBoard.slice();
+}
+function saveLeaderboard(board) {
+  _memBoard = board.slice();
+  if (_store) {
+    try { _store.setItem(LEADERBOARD_KEY, JSON.stringify(board)); } catch(e) {}
+  }
+}
+function isHighScore(s) {
+  const board = loadLeaderboard();
+  return board.length < 5 || s > (board[board.length - 1]?.score || 0);
+}
+function addToLeaderboard(name, s) {
+  const board = loadLeaderboard();
+  board.push({ name, score: s, date: new Date().toLocaleDateString() });
+  board.sort((a, b) => b.score - a.score);
+  if (board.length > 5) board.length = 5;
+  saveLeaderboard(board);
+  if (board[0]) hiScore = board[0].score;
+}
+// Load hiScore from leaderboard on startup
+(function() {
+  const board = loadLeaderboard();
+  if (board.length > 0) hiScore = board[0].score;
+})();
+
+// ─── INITIALS ENTRY STATE ───
+let initialsChars = [0, 0, 0]; // indices into ALPHABET
+let initialsCursor = 0;          // which of 3 letters is selected (0-2), 3 = DONE button
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+function enterInitials() {
+  initialsChars = [0, 0, 0];
+  initialsCursor = 0;
+  gameState = STATE.INITIALS;
+  // Clear justPressed so the same Space/Enter that triggered this doesn't also advance cursor
+  clearJustPressed();
+}
 let lives = 3;
 let comboCount = 0;
 let comboTimer = 0;
@@ -3479,10 +3562,189 @@ function drawWinScreen(time) {
   ctx.fillStyle = '#ccc';
   const blink = Math.sin(time * 3) > 0;
   if (blink) {
-    ctx.fillText(isMobile ? 'Tap to Play Again' : 'Press SPACE or ENTER to Play Again', GAME_W / 2, GAME_H / 2 + 130);
+    if (score > 0 && isHighScore(score)) {
+      ctx.fillText(isMobile ? 'Tap to Enter Your Name!' : 'Press SPACE to Enter Your Name!', GAME_W / 2, GAME_H / 2 + 130);
+    } else {
+      ctx.fillText(isMobile ? 'Tap to Play Again' : 'Press SPACE or ENTER to Play Again', GAME_W / 2, GAME_H / 2 + 130);
+    }
   }
 
   ctx.textAlign = 'left';
+}
+
+// ─── INITIALS ENTRY SCREEN ───
+function drawInitialsScreen(time) {
+  // Dark overlay
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillRect(0, 0, GAME_W, GAME_H);
+
+  ctx.textAlign = 'center';
+
+  // Title
+  const bounce = Math.sin(time * 3) * 3;
+  ctx.font = '700 48px Bangers, cursive';
+  ctx.fillStyle = '#FFD700';
+  ctx.fillText('NEW HIGH SCORE!', GAME_W / 2, GAME_H / 2 - 120 + bounce);
+
+  ctx.font = '700 24px Inter, sans-serif';
+  ctx.fillStyle = '#FFF';
+  ctx.fillText(`Score: ${score}`, GAME_W / 2, GAME_H / 2 - 75);
+
+  // Instructions
+  ctx.font = '500 16px Inter, sans-serif';
+  ctx.fillStyle = '#aaa';
+  if (isMobile) {
+    ctx.fillText('Tap letters to change \u00b7 Tap DONE to save', GAME_W / 2, GAME_H / 2 - 45);
+  } else {
+    ctx.fillText('\u2190 \u2192 to select letter \u00b7 \u2191 \u2193 to change \u00b7 SPACE to confirm', GAME_W / 2, GAME_H / 2 - 45);
+  }
+
+  // Draw 3 letter slots
+  const slotW = 60;
+  const slotH = 70;
+  const gap = 16;
+  const totalW = slotW * 3 + gap * 2;
+  const startX = GAME_W / 2 - totalW / 2;
+  const slotY = GAME_H / 2 - 20;
+
+  for (let i = 0; i < 3; i++) {
+    const x = startX + i * (slotW + gap);
+    const selected = (initialsCursor === i);
+
+    // Slot background
+    ctx.fillStyle = selected ? 'rgba(255,215,0,0.2)' : 'rgba(255,255,255,0.08)';
+    ctx.strokeStyle = selected ? '#FFD700' : 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = selected ? 3 : 1;
+    ctx.beginPath();
+    ctx.roundRect(x, slotY, slotW, slotH, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    // Up/Down arrows (always visible on mobile, selected only on desktop)
+    if (selected || isMobile) {
+      ctx.fillStyle = selected ? '#FFD700' : 'rgba(255,255,255,0.4)';
+      ctx.font = '20px Inter, sans-serif';
+      ctx.fillText('\u25B2', x + slotW / 2, slotY - 8);
+      ctx.fillText('\u25BC', x + slotW / 2, slotY + slotH + 22);
+    }
+
+    // Letter
+    ctx.font = '700 40px Bangers, cursive';
+    ctx.fillStyle = selected ? '#FFD700' : '#FFF';
+    ctx.fillText(ALPHABET[initialsChars[i]], x + slotW / 2, slotY + 48);
+  }
+
+  // DONE button
+  const doneX = GAME_W / 2 - 60;
+  const doneY = slotY + slotH + 45;
+  const doneW = 120;
+  const doneH = 40;
+  const doneSelected = (initialsCursor === 3);
+
+  ctx.fillStyle = doneSelected ? 'rgba(76,175,80,0.4)' : 'rgba(76,175,80,0.15)';
+  ctx.strokeStyle = doneSelected ? '#4CAF50' : 'rgba(76,175,80,0.4)';
+  ctx.lineWidth = doneSelected ? 3 : 1;
+  ctx.beginPath();
+  ctx.roundRect(doneX, doneY, doneW, doneH, 8);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.font = '700 20px Bangers, cursive';
+  ctx.fillStyle = doneSelected ? '#4CAF50' : '#aaa';
+  ctx.fillText('DONE', GAME_W / 2, doneY + 28);
+
+  // Mobile touch zones — draw invisible areas for touch detection
+  // (handled in updateInitials)
+
+  ctx.textAlign = 'left';
+}
+
+function handleInitialsInput() {
+  if (justPressed['ArrowLeft'] || justPressed['KeyA']) {
+    initialsCursor = Math.max(0, initialsCursor - 1);
+    playChop();
+  }
+  if (justPressed['ArrowRight'] || justPressed['KeyD']) {
+    initialsCursor = Math.min(3, initialsCursor + 1);
+    playChop();
+  }
+  if (justPressed['ArrowUp'] || justPressed['KeyW'] || touchJumpJustPressed) {
+    if (initialsCursor < 3) {
+      initialsChars[initialsCursor] = (initialsChars[initialsCursor] + 1) % 26;
+      playChop();
+    }
+  }
+  if (justPressed['ArrowDown'] || justPressed['KeyS'] || touchDownJustPressed) {
+    if (initialsCursor < 3) {
+      initialsChars[initialsCursor] = (initialsChars[initialsCursor] + 25) % 26;
+      playChop();
+    }
+  }
+  if (justPressed['Space'] || justPressed['Enter'] || touchAttackJustPressed) {
+    if (initialsCursor === 3) {
+      // Confirm — save to leaderboard
+      const name = initialsChars.map(i => ALPHABET[i]).join('');
+      addToLeaderboard(name, score);
+      gameState = STATE.MENU;
+      playChop();
+    } else {
+      // Move to next slot
+      initialsCursor = Math.min(3, initialsCursor + 1);
+      playChop();
+    }
+  }
+}
+
+// Touch handling for initials screen (mobile)
+let initialsTouchZones = [];
+function getInitialsTouchZones() {
+  const slotW = 60;
+  const slotH = 70;
+  const gap = 16;
+  const totalW = slotW * 3 + gap * 2;
+  const startX = GAME_W / 2 - totalW / 2;
+  const slotY = GAME_H / 2 - 20;
+  const zones = [];
+  for (let i = 0; i < 3; i++) {
+    const x = startX + i * (slotW + gap);
+    // Up arrow zone
+    zones.push({ x: x, y: slotY - 30, w: slotW, h: 30, action: 'up', slot: i });
+    // Letter zone (select this slot)
+    zones.push({ x: x, y: slotY, w: slotW, h: slotH, action: 'select', slot: i });
+    // Down arrow zone
+    zones.push({ x: x, y: slotY + slotH, w: slotW, h: 30, action: 'down', slot: i });
+  }
+  // DONE button
+  zones.push({ x: GAME_W / 2 - 60, y: slotY + slotH + 45, w: 120, h: 40, action: 'done', slot: -1 });
+  return zones;
+}
+
+function handleInitialsTouch(gameX, gameY) {
+  const zones = getInitialsTouchZones();
+  for (const z of zones) {
+    if (gameX >= z.x && gameX <= z.x + z.w && gameY >= z.y && gameY <= z.y + z.h) {
+      if (z.action === 'up') {
+        initialsCursor = z.slot;
+        initialsChars[z.slot] = (initialsChars[z.slot] + 1) % 26;
+        playChop();
+      } else if (z.action === 'down') {
+        initialsCursor = z.slot;
+        initialsChars[z.slot] = (initialsChars[z.slot] + 25) % 26;
+        playChop();
+      } else if (z.action === 'select') {
+        initialsCursor = z.slot;
+        // Cycle letter on tap
+        initialsChars[z.slot] = (initialsChars[z.slot] + 1) % 26;
+        playChop();
+      } else if (z.action === 'done') {
+        const name = initialsChars.map(i => ALPHABET[i]).join('');
+        addToLeaderboard(name, score);
+        gameState = STATE.MENU;
+        playChop();
+      }
+      break;
+    }
+  }
 }
 
 // ─── DRAW RACCOON ───
@@ -3798,16 +4060,8 @@ function drawMenu(time) {
   ctx.fillStyle = '#E8D5B7';
   ctx.fillText('HEALDSBURG CRUSADE', GAME_W / 2, 245);
 
-  // Start prompt
-  ctx.font = '600 18px Inter, sans-serif';
-  ctx.fillStyle = '#fff';
-  const blink = Math.sin(time * 3) > 0;
-  if (blink) {
-    ctx.fillText(isMobile ? 'TAP TO START' : 'CLICK OR PRESS SPACE TO START', GAME_W / 2, 310);
-  }
-
   // ─── Game Guide ───
-  const guideTop = 345;
+  const guideTop = 310;
   const colW = 280;
   const leftCol = GAME_W / 2 - colW - 40;
   const rightCol = GAME_W / 2 + 40;
@@ -3867,6 +4121,36 @@ function drawMenu(time) {
   ctx.font = '400 12px Inter, sans-serif';
   ctx.fillStyle = '#ddd';
   ctx.fillText('\u2665 Find Jessica at the end of Healdsburg!', leftCol, guideTop + 158);
+
+  // ─── Leaderboard on menu ───
+  const board = loadLeaderboard();
+  if (board.length > 0) {
+    const lbX = GAME_W / 2;
+    const lbTop = guideTop + 190;
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 16px Bangers, cursive';
+    ctx.fillStyle = '#FFD700';
+    ctx.fillText('\uD83C\uDFC6 TOP SCORES', lbX, lbTop);
+
+    ctx.font = '600 13px Inter, sans-serif';
+    for (let i = 0; i < board.length; i++) {
+      const entry = board[i];
+      const y = lbTop + 20 + i * 18;
+      ctx.fillStyle = i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#aaa';
+      ctx.fillText(`${i + 1}. ${entry.name}  ${entry.score.toLocaleString()}`, lbX, y);
+    }
+  }
+
+  // ─── Blinking start prompt at bottom ───
+  ctx.textAlign = 'center';
+  ctx.font = '600 16px Inter, sans-serif';
+  ctx.fillStyle = '#fff';
+  const startBlink = Math.sin(time * 3) > 0;
+  if (startBlink) {
+    const startY = GAME_H - 40;
+    ctx.fillText(isMobile ? 'TAP TO START' : 'PRESS SPACE TO START', GAME_W / 2, startY);
+  }
+
   ctx.restore();
 }
 
@@ -3895,7 +4179,11 @@ function drawGameOver(time) {
   ctx.fillStyle = '#ccc';
   const blink = Math.sin(time * 3) > 0;
   if (blink) {
-    ctx.fillText(isMobile ? 'Tap to Restart' : 'Press SPACE or ENTER to Restart', GAME_W / 2, GAME_H / 2 + 100);
+    if (score > 0 && isHighScore(score)) {
+      ctx.fillText(isMobile ? 'Tap to Enter Your Name!' : 'Press SPACE to Enter Your Name!', GAME_W / 2, GAME_H / 2 + 100);
+    } else {
+      ctx.fillText(isMobile ? 'Tap to Restart' : 'Press SPACE or ENTER to Restart', GAME_W / 2, GAME_H / 2 + 100);
+    }
   }
   ctx.textAlign = 'left';
 }
@@ -4850,6 +5138,8 @@ function render(time) {
     }
   } else if (gameState === STATE.SHOP) {
     drawShopInterior(time);
+  } else if (gameState === STATE.INITIALS) {
+    drawInitialsScreen(time);
   }
 
   ctx.restore();
@@ -4877,8 +5167,20 @@ function gameLoop(timestamp) {
   // Handle deferred start/restart (from touch on canvas)
   if (startGameRequested) {
     startGameRequested = false;
-    if (gameState === STATE.MENU || gameState === STATE.GAMEOVER || (gameState === STATE.WIN && winAnimPhase === 2 && winAnimTimer > 3)) {
+    if (gameState === STATE.MENU) {
       startGame();
+    } else if (gameState === STATE.GAMEOVER) {
+      if (score > 0 && isHighScore(score)) {
+        enterInitials();
+      } else {
+        startGame();
+      }
+    } else if (gameState === STATE.WIN && winAnimPhase === 2 && winAnimTimer > 3) {
+      if (score > 0 && isHighScore(score)) {
+        enterInitials();
+      } else {
+        startGame();
+      }
     }
   }
 
@@ -4890,6 +5192,9 @@ function gameLoop(timestamp) {
   }
   if (gameState === STATE.SHOP) {
     updateShop();
+  }
+  if (gameState === STATE.INITIALS) {
+    handleInitialsInput();
   }
 
   render(timestamp / 1000);
@@ -4974,14 +5279,26 @@ function startGame() {
 function handleStart() {
   grabFocus();
   initAudio();
-  if (gameState === STATE.MENU || gameState === STATE.GAMEOVER || (gameState === STATE.WIN && winAnimPhase === 2 && winAnimTimer > 3)) {
+  if (gameState === STATE.MENU) {
     startGame();
+  } else if (gameState === STATE.GAMEOVER) {
+    if (score > 0 && isHighScore(score)) {
+      enterInitials();
+    } else {
+      startGame();
+    }
+  } else if (gameState === STATE.WIN && winAnimPhase === 2 && winAnimTimer > 3) {
+    if (score > 0 && isHighScore(score)) {
+      enterInitials();
+    } else {
+      startGame();
+    }
   }
 }
 
 // Listen for start on canvas, document, AND window for iframe compat
 function onStartKey(e) {
-  if (gameState !== STATE.PLAYING && gameState !== STATE.SHOP && (e.code === 'Space' || e.code === 'Enter')) {
+  if (gameState !== STATE.PLAYING && gameState !== STATE.SHOP && gameState !== STATE.INITIALS && (e.code === 'Space' || e.code === 'Enter')) {
     e.preventDefault();
     handleStart();
   }
@@ -4989,7 +5306,17 @@ function onStartKey(e) {
 canvas.addEventListener('keydown', onStartKey);
 document.addEventListener('keydown', onStartKey);
 
-canvas.addEventListener('click', () => {
+canvas.addEventListener('click', (e) => {
+  if (gameState === STATE.INITIALS) {
+    // Handle click for initials entry screen (desktop)
+    const rect = canvas.getBoundingClientRect();
+    const rawX = e.clientX - rect.left;
+    const rawY = e.clientY - rect.top;
+    const gameX = (rawX - offsetX) / scale;
+    const gameY = (rawY - offsetY) / scale;
+    handleInitialsTouch(gameX, gameY);
+    return;
+  }
   handleStart();
 });
 
@@ -5012,7 +5339,7 @@ window.getJessica = function() { return { x: jessica.x, reached: jessica.reached
 window.goToJessica = function() { player.x = jessica.x - 200; invincibleTimer = 999; };
 window.render_game_to_text = function() {
   return JSON.stringify({
-    state: ['MENU', 'PLAYING', 'GAMEOVER', 'PAUSED', 'SHOP', 'WIN'][gameState],
+    state: ['MENU', 'PLAYING', 'GAMEOVER', 'PAUSED', 'SHOP', 'WIN', 'INITIALS'][gameState],
     player: { x: Math.round(player.x), y: Math.round(player.y), vx: Math.round(player.vx), vy: Math.round(player.vy), grounded: player.grounded, attacking: player.attacking },
     camera: { x: Math.round(camera.x) },
     score, lives, comboCount,
