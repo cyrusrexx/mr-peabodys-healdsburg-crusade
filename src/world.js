@@ -6,7 +6,7 @@ export const WORLD = {
   L: 480, SHOP_X: 156, SHOP_W: 10, DOOR_X: 161, MORTY_X: 100, JESS_X: 472,
   PET_X: 236, PET_W: 7.2, PET_DOOR: 239.6, BIKE_X: [118, 352],
   FRONT_Z: -2.4, LANE_Z: 0,
-  // final boss arena (the boar comes out of the park just before Jessica)
+  // final boss arena (the giant wild turkey struts out of the park just before Jessica)
   BOSS_TRIG: 447, ARENA0: 445, ARENA1: 466,
   // park benches with friendly locals who share their food (plaza ones reuse the plaza benches)
   BENCH_X: [30, 112, 136, 196, 266, 290, 375, 411],

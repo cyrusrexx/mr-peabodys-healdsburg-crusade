@@ -48,11 +48,11 @@ npm start            # serves dist/ at http://localhost:3000  (add ?debug for th
 | Feature | Location |
 | --- | --- |
 | Main loop, physics, attacks, power-ups, boss AI | `src/game.js` |
-| Kick variety (snap, spin, double, high, mule) + chop/paw/uppercut cycle | `game.js → attack()` |
+| Kick variety (snap, spin, double, high, mule) + chop/paw/uppercut cycle | `game.js → attack()` + `swingSweep()`: each swing stays live for `C.SWING_T` (0.16 s). Reach: chop ≈ 1.75u (`C.RANGE`), kick ≈ 2.3u, flying kick ≈ 2.3u |
 | Flying side kick | `game.js → fskSweep()`; pose in `chars.js` (`s.fsk`) |
 | Trash cans (knock over for food) | `game.js → knockCan()` |
 | Bench locals who share food (hot dog = PUPPY RUN, burrito = mega fart) | `chars.js → makeBencher()/makeFood()`, `game.js → eatFood()/megaFart()` |
-| Boss: Big Russian River Boar (feral hog) | `chars.js → makeBoar()`, `game.js` boss state machine; arena in `world.js` (BOSS_TRIG 447, ARENA 445–466) |
+| Boss: Tom the Giant Wild Turkey (10 HP; only its charge and landing quake hurt; it gets dizzy after hitting an arena wall, and dizzy hits do double damage) | `chars.js → makeTurkey()`, `game.js` boss state machine (`C.BOSS_HP`, `C.BOSS_SCALE`); arena in `world.js` (BOSS_TRIG 447, ARENA 445–466). The older boar model `makeBoar()` is kept for rollback |
 | Characters (Peabody, Morty, Jessica cutout, cats, gray fox, pigeons) | `src/chars.js`, `src/sculpt.js` |
 | Cat coats (14 variants) | `chars.js → CAT_VARIANTS` |
 | Level layout, buildings, platforms, enemy spawns | `src/world.js` |

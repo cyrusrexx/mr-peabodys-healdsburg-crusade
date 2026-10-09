@@ -1,7 +1,7 @@
 // Core gameplay — same rules as the classic, re-expressed in 3D units (1u = 50 classic px)
 import * as THREE from 'three';
 import { WORLD, TREATS, TREAT_PICKS, generateLayout, generateCollectibles, generateEnemies } from './world.js';
-import { makePeabody, makeCat, makePigeon, makeFox, makeRaccoon, makeChicken, makeMorty, makeJessica, makeWatermelon, makeMinnow, makeTrashCan, makeDogBed, makeCyclist, makeBoar, makeBencher, makeFood } from './chars.js';
+import { makePeabody, makeCat, makePigeon, makeFox, makeRaccoon, makeChicken, makeMorty, makeJessica, makeWatermelon, makeMinnow, makeTrashCan, makeDogBed, makeCyclist, makeTurkey, makeBencher, makeFood } from './chars.js';
 import { input, clearJustPressed, keys, justPressed } from './input.js';
 const CHEAT = ['U', 'U', 'D', 'D', 'L', 'R', 'L', 'R']; // ↑ ↑ ↓ ↓ ← → ← → warps to the final quarter
 import { sfx, setMusic, restartMusic, setMusicRate } from './audio.js';
@@ -9,12 +9,12 @@ import { clamp, damp, lerp, rand, seed, srand, rnd } from './util.js';
 
 export const C = {
   GRAVITY: 36, JUMP: 12.4, JUMP_PER: 0.8, RUN: 6.12, RUN_PER: 0.6, SHAKE_BONUS: 2.4,
-  ATTACK_DUR: 0.25, ATTACK_CD: 0.35, RANGE: 1.1, STAMINA_MAX: 100, NAP: 2,
+  ATTACK_DUR: 0.25, ATTACK_CD: 0.35, RANGE: 1.75, SWING_T: 0.16, STAMINA_MAX: 100, NAP: 2,
   ROLL_T: 0.5, TRICK_T: 1.0, TOOT_CD: 3.5,
   SKY_T: 20, DBL_T: 25, ZOOM_T: 12, MAG_T: 20, ZOOM_BONUS: 3.4,
   KICK_T: 8, FART_T: 4, BARK_T: 15, SHAKE_T: 10, FLY_T: 30, MORTY_T: 5,
   POWER_EVERY: 5,
-  FSK_T: 0.42, FSK_V: 9.5, PUPPY_T: 10, PUPPY_BONUS: 3.2, BOSS_HP: 16, BOAR_SCALE: 3.1,
+  FSK_T: 0.42, FSK_V: 9.5, PUPPY_T: 10, PUPPY_BONUS: 3.2, BOSS_HP: 10, BOSS_SCALE: 3.0,
 };
 
 class Pool {
@@ -60,7 +60,7 @@ export class Game {
     this.petGlow = this.doorGlow.clone(); this.petGlow.material = this.doorGlow.material.clone(); this.petGlow.scale.set(0.75, 0.85, 1);
     this.petGlow.position.set(WORLD.PET_DOOR, 1.12, WORLD.FRONT_Z + 0.22); scene.add(this.petGlow);
     // final boss + bench locals and their snacks
-    this.boarRig = makeBoar(); this.boarRig.root.visible = false; this.boarRig.root.scale.setScalar(C.BOAR_SCALE); scene.add(this.boarRig.root);
+    this.boarRig = makeTurkey(); this.boarRig.root.visible = false; this.boarRig.root.scale.setScalar(C.BOSS_SCALE); scene.add(this.boarRig.root);
     this.benchRigs = WORLD.BENCH_X.map((x, i) => { const r = makeBencher(i); r.root.position.set(x, 0, -1.6); scene.add(r.root); return r; });
     this.foodRigs = WORLD.BENCH_X.map((x, i) => { const r = makeFood(this.benchRigs[i].food); r.root.visible = false; r.root.scale.setScalar(1.3); scene.add(r.root); return r; });
     this.bikeRigs = [makeCyclist(0), makeCyclist(1)];
@@ -108,7 +108,7 @@ export class Game {
     this.benchers = this.benchRigs.map((rig, i) => ({ rig, x: WORLD.BENCH_X[i], given: false, food: rig.food, happyT: 0, tossNow: false }));
     this.foods = this.foodRigs.map((rig, i) => ({ rig, kind: this.benchRigs[i].food, active: false, landed: false, x: 0, y: 0, vx: 0, vy: 0, t: 0 }));
     for (const f of this.foods) f.rig.root.visible = false;
-    this.boss = { state: 'wait', x: WORLD.ARENA1 + 6, y: 0, vx: 0, vy: 0, facing: -1, hp: C.BOSS_HP, t: 0, cycle: 0, invT: 0, hitT: 0, stompK: 0, done: false };
+    this.boss = { state: 'wait', x: WORLD.ARENA1 + 6, y: 0, vx: 0, vy: 0, facing: -1, hp: C.BOSS_HP, hpMax: C.BOSS_HP, t: 0, cycle: 0, invT: 0, hitT: 0, stompK: 0, done: false };
     this.boarRig.root.visible = false; this.boarRig.root.rotation.set(0, 0, 0);
     this.ui.bossBar?.(null);
     this.racs = this.racRigs.map((r, i) => ({ rig: r, x: 20 + i * 45 + srand(-6, 6), vx: 0, facing: 1, state: 'wander', t: rand(1, 3), target: null }));
@@ -278,6 +278,7 @@ export class Game {
     }
     if (input.tootPressed()) this.toot();
     if (p.fskT > 0) this.fskSweep();
+    if (p.swing) { p.swing.t -= dt; if (p.swing.t <= 0) p.swing = null; else this.swingSweep(); }
 
     // ── rolls: flick down+sideways (or ↓ while running) = forward roll; flick down (or ↓ standing still) = roll over ──
     const onBed = this.beds.some((b) => Math.abs(p.x - b.x) < 0.65 && Math.abs(p.y - b.y) < 0.1);
@@ -407,7 +408,7 @@ export class Game {
     p.attackT = 1; p.attackCd = C.ATTACK_CD;
     const kick = p.kickT > 0;
     const air = !p.grounded, sky = p.skyT > 0;
-    const range = C.RANGE * (kick ? 1.3 : 1) * (1 + p.sizeLvl * 0.08);
+    const range = C.RANGE * (kick ? 1.3 : 1) * (1 + p.sizeLvl * 0.08); // kick ≈ 2.3u past Peabody
     sfx.chop();
     // ── airborne = FLYING SIDE KICK: lunge forward with the leg out, sweeping birds out of the sky ──
     if (air && p.flyT <= 0 && p.fskT <= 0) {
@@ -423,7 +424,7 @@ export class Game {
       return;
     }
     // ── ground: a different move every time ──
-    let v, label, col, fwd = range, back = -0.3, up = kick ? 1.15 : 1.0, mult = kick ? 2 : 1;
+    let v, label, col, fwd = range, back = -0.55, up = kick ? 1.4 : 1.25, mult = kick ? 2 : 1;
     if (kick) {
       do { v = Math.floor(Math.random() * 5); } while (v === p.lastKick);
       p.lastKick = v;
@@ -431,7 +432,7 @@ export class Game {
       if (v === 1) { back = -range * 1.05; fwd = range * 1.15; }
       if (v === 2) mult = 3;
       if (v === 3) up += 0.9;
-      if (v === 4) { back = -range * 1.35; fwd = 0.35; }
+      if (v === 4) { back = -range * 1.35; fwd = range * 0.9; } // mule kick: back legs fire behind, front still connects
     } else { p.atkVar = (p.atkVar + 1) % 3; v = p.atkVar; label = ['CHOP!', 'PAW SWIPE!', 'UPPERCUT!'][v]; col = 0xfff6dc; if (v === 2) up += 0.45; }
     p.atkVar = v;
     if (kick && v === 1) { this.fx.swoosh(p.x + p.facing * 0.6, p.y + 0.55, 0, p.facing, col, true); this.fx.swoosh(p.x - p.facing * 0.6, p.y + 0.55, 0, -p.facing, col, true); this.fx.ring(p.x, p.y + 0.5, 0.1, col, 1.6, 0.3); }
@@ -441,6 +442,14 @@ export class Game {
     // air chop while flying: a little hang-time hop once per jump so you can line up birds
     if (air && !p.airHop) { p.airHop = true; p.vy = Math.max(p.vy, 3.2); }
     if (sky) { this.fx.swoosh(p.x + p.facing * 0.35, p.y + 1.6, 0, p.facing, 0x8fd3ff, true); this.fx.ring(p.x + p.facing * 0.4, p.y + 2.0, 0.1, 0x8fd3ff, 1.6, 0.3); }
+    // the swing stays live for a few frames so moving cats / birds can't slip between frames
+    p.swing = { t: C.SWING_T, fwd, back, up, mult, label, kick, air, sky, boss: false, any: false };
+    this.swingSweep();
+    if (p.barkT > 0 && this.barkBlast()) { this.hitStop = 0.05; sfx.whack(); }
+  }
+  swingSweep() {
+    const p = this.p, w = p.swing; if (!w) return;
+    const { fwd, back, up, mult, label, kick, air, sky } = w;
     let hit = false;
     for (const e of this.enemies) {
       if (!e.alive) continue;
@@ -451,7 +460,7 @@ export class Game {
       const reach = fwd + (bird && air ? 0.55 : 0) + (bird && sky ? 0.8 : 0);
       const upR = up + (bird && air ? 0.75 : 0) + (bird && sky ? 2.8 : 0);
       const bk = bird && (air || sky) ? Math.min(back, -0.6) : back;
-      if (dx > bk && dx < reach && dy < upR && dy > -(kick ? 1.15 : 1.0)) {
+      if (dx > bk && dx < reach && dy < upR && dy > -(kick ? 1.25 : 1.1)) {
         this.killEnemy(e, (e.type === 'cat' ? 100 : 75) * mult, label);
         hit = true;
       }
@@ -462,13 +471,12 @@ export class Game {
       const dx = (c.x - p.x) * p.facing;
       if (dx > back - 0.2 && dx < fwd + 0.35 && p.y < 1.2) { this.knockCan(c, dx >= 0 ? p.facing : -p.facing); hit = true; }
     }
-    // the boss
-    if (this.bossHittable()) {
+    // the boss (once per swing)
+    if (!w.boss && this.bossHittable()) {
       const dx = (this.boss.x - p.x) * p.facing;
-      if (dx > back - 1.1 && dx < fwd + 1.25 && p.y < 2.2) { this.damageBoss(kick ? 2 : 1, label); hit = true; }
+      if (dx > back - 1.1 && dx < fwd + 1.4 && p.y < 2.4) { w.boss = true; this.damageBoss(kick ? 2 : 1, label); hit = true; }
     }
-    if (p.barkT > 0) hit = this.barkBlast() || hit;
-    if (hit) { this.hitStop = 0.05; this.shake = Math.max(this.shake, 0.18); sfx.whack(); }
+    if (hit && !w.any) { w.any = true; this.hitStop = 0.05; this.shake = Math.max(this.shake, 0.18); sfx.whack(); }
   }
   barkBlast() {
     // fries bark: blast pigeons within 6u
@@ -481,14 +489,14 @@ export class Game {
   fskSweep() {
     // the extended leg sweeps a box ahead of Peabody for the whole kick
     const p = this.p; let hit = false;
-    const reach = 1.55 * (1 + p.sizeLvl * 0.08) + (p.skyT > 0 ? 0.6 : 0);
+    const reach = 2.3 * (1 + p.sizeLvl * 0.08) + (p.skyT > 0 ? 0.6 : 0);
     for (const e of this.enemies) {
       if (!e.alive) continue;
       const dx = (e.x - p.x) * p.facing, ey = e.type === 'pigeon' ? e.y : e.y + 0.3, dy = ey - (p.y + 0.45);
-      if (dx > -0.5 && dx < reach && dy > -1.1 && dy < 1.2 + (p.skyT > 0 ? 2 : 0)) { this.killEnemy(e, (e.type === 'pigeon' ? 150 : 175) * (p.kickT > 0 ? 2 : 1), 'FLYING KICK!'); hit = true; }
+      if (dx > -0.6 && dx < reach && dy > -1.3 && dy < 1.6 + (p.skyT > 0 ? 2 : 0)) { this.killEnemy(e, (e.type === 'pigeon' ? 150 : 175) * (p.kickT > 0 ? 2 : 1), 'FLYING KICK!'); hit = true; }
     }
-    for (const c of this.cans) if (!c.knocked && Math.abs(c.x - p.x) < 1.3 && p.y < 1.4) { this.knockCan(c, p.facing); hit = true; }
-    if (!p.fskBoss && this.bossHittable() && Math.abs(this.boss.x - p.x) < 2.1 && p.y < 2.6) { p.fskBoss = true; this.damageBoss(p.kickT > 0 ? 3 : 2, 'FLYING KICK!'); p.vy = 7; p.fskT = 0; p.vx = -p.facing * 3; hit = true; }
+    for (const c of this.cans) if (!c.knocked && Math.abs(c.x - p.x) < 1.8 && p.y < 1.5) { this.knockCan(c, p.facing); hit = true; }
+    if (!p.fskBoss && this.bossHittable() && Math.abs(this.boss.x - p.x) < 2.8 && p.y < 2.8) { p.fskBoss = true; this.damageBoss(p.kickT > 0 ? 3 : 2, 'FLYING KICK!'); p.vy = 7; p.fskT = 0; p.vx = -p.facing * 3; hit = true; }
     if (hit) { this.hitStop = 0.04; this.shake = Math.max(this.shake, 0.2); sfx.whack(); }
   }
   knockCan(c, dir) {
@@ -562,7 +570,7 @@ export class Game {
     if (this.bossHittable() && Math.abs(this.boss.x - cx) < half) { this.boss.invT = 0; this.damageBoss(5, 'FART ATTACK!'); }
   }
 
-  // ───────────────────────── BOSS: the Big Russian River Boar ─────────────────────────
+  // ───────────────────────── BOSS: Tom, the Giant Wild Turkey ─────────────────────────
   bossHittable() { const b = this.boss; return b.state !== 'wait' && b.state !== 'enter' && b.state !== 'defeated' && b.state !== 'gone' && b.invT <= 0; }
   damageBoss(n, label) {
     const b = this.boss, p = this.p;
@@ -574,9 +582,9 @@ export class Game {
     if (b.state !== 'stunned' && b.state !== 'charge') b.x += Math.sign(b.x - p.x || 1) * 0.5;
     this.ui.bossBar?.(b.hp / C.BOSS_HP, true);
     if (b.hp <= 0) {
-      b.state = 'defeated'; b.t = 0; b.vy = 9; b.vx = 3;
+      b.state = 'defeated'; b.t = 0; b.vy = 5; b.vx = 3;
       sfx.win(); setTimeout(() => sfx.bark(), 300);
-      this.popText('BOAR DEFEATED!', '#ffe27a', 1.8, 2.0); this.addScore(2000, b.x, 3.2, '#ffe27a', 'BOSS');
+      this.popText('TURKEY DEFEATED!', '#ffe27a', 1.8, 2.0); this.addScore(2000, b.x, 3.2, '#ffe27a', 'BOSS');
       this.fx.confetti(b.x, 3, 0, 60);
       setMusicRate(1);
     }
@@ -587,7 +595,7 @@ export class Game {
       if (p.x < WORLD.BOSS_TRIG) return;
       b.state = 'enter'; b.x = WORLD.ARENA1 + 7; b.facing = -1; b.t = 0;
       r.root.visible = true; r.root.rotation.set(0, 0, 0);
-      this.popText('BOSS: BIG RUSSIAN RIVER BOAR!', '#ff7a2f', 1.2, 2.1);
+      this.popText('BOSS: TOM THE GIANT WILD TURKEY!', '#ff7a2f', 1.2, 2.1);
       sfx.bigFart(); this.shake = 0.4; this.ui.bossBar?.(1); setMusicRate(1.06);
     }
     if (b.state === 'gone') return;
@@ -596,41 +604,42 @@ export class Game {
     switch (b.state) {
       case 'enter':
         b.vx = -6; if (Math.random() < dt * 10) this.fx.dust(b.x, 0, 0, 2, -1);
-        if (b.x <= WORLD.ARENA1 - 3.5) { b.state = 'idle'; b.t = 0; b.vx = 0; this.fx.text('SNORT!', b.x, 2.6, 0.3, '#ffb070', 1); sfx.hit(); }
+        if (b.x <= WORLD.ARENA1 - 3.5) { b.state = 'idle'; b.t = 0; b.vx = 0; this.fx.text('GOBBLE GOBBLE!', b.x, 2.8, 0.3, '#ffb070', 1); sfx.hit(); }
         break;
       case 'idle':
-        b.facing = toP; b.vx = damp(b.vx, toP * (enraged ? 2.2 : 1.4), 4, dt);
-        if (b.t > (enraged ? 0.7 : 1.1)) { b.cycle++; b.t = 0; b.vx = 0; b.state = b.cycle % 3 === 0 ? 'stomp' : 'windup'; if (b.state === 'stomp') { b.vy = 10; b.stompK = 0; } }
+        b.facing = toP; b.vx = damp(b.vx, toP * (enraged ? 1.6 : 1.1), 4, dt);
+        if (b.t > (enraged ? 1.2 : 1.7)) { b.cycle++; b.t = 0; b.vx = 0; b.state = enraged && b.cycle % 3 === 0 ? 'stomp' : 'windup'; if (b.state === 'stomp') { b.vy = 9; b.stompK = 0; this.fx.text('FLAP!', b.x, 2.9, 0.3, '#ffd28a', 1); } }
         break;
       case 'windup':
         b.vx = 0; b.facing = toP;
         if (Math.random() < dt * 16) this.fx.dust(b.x - b.facing * 0.8, 0, 0.2, 2, -b.facing);
-        if (b.t > (enraged ? 0.55 : 0.8)) { b.state = 'charge'; b.t = 0; b.vx = b.facing * (enraged ? 12 : 10); this.fx.text('CHARGE!', b.x, 2.7, 0.3, '#ff5a3a', 1); sfx.whack(); }
+        if (b.t > (enraged ? 0.95 : 1.25)) { b.state = 'charge'; b.t = 0; b.vx = b.facing * (enraged ? 9 : 7.5); this.fx.text('CHARGE! JUMP!', b.x, 2.9, 0.3, '#ff5a3a', 1); sfx.whack(); }
         break;
       case 'charge':
         if (Math.random() < dt * 20) this.fx.dust(b.x - b.facing * 0.9, 0, 0, 2, -b.facing);
         if ((b.vx < 0 && b.x <= WORLD.ARENA0 + 1.2) || (b.vx > 0 && b.x >= WORLD.ARENA1 - 0.2)) {
           b.state = 'stunned'; b.t = 0; b.vx = 0; this.shake = 0.45; sfx.whack(); sfx.hit();
           this.fx.ring(b.x + b.facing * 1.0, 1, 0.2, 0xffffff, 2.2, 0.35); this.fx.sparkle(b.x + b.facing, 1.6, 0, 0xffe14a, 18, 3);
-          this.fx.text('DIZZY! HIT HIM!', b.x, 2.9, 0.3, '#ffe14a', 1);
+          this.fx.text('DIZZY! HIT HIM!', b.x, 3.0, 0.3, '#ffe14a', 1);
         }
         break;
       case 'stunned':
-        b.vx = 0; if (b.t > (enraged ? 1.6 : 2.1)) { b.state = 'idle'; b.t = 0; }
+        b.vx = 0; if (b.t > (enraged ? 2.6 : 3.2)) { b.state = 'idle'; b.t = 0; }
         break;
       case 'stomp': {
-        b.vx = 0; b.vy -= 30 * dt; b.y += b.vy * dt; b.stompK = Math.min(1, b.t / 0.66);
+        b.vx = 0; b.vy -= 24 * dt; b.y += b.vy * dt; b.stompK = Math.min(1, b.t / 0.75);
         if (b.y <= 0 && b.vy < 0) {
           b.y = 0; b.state = 'idle'; b.t = 0; this.shake = 0.5; sfx.bigFart();
-          this.fx.ring(b.x, 0.15, 0, 0xffd28a, 6, 0.5); this.fx.dust(b.x, 0, 0, 16); this.fx.text('STOMP!', b.x, 2.6, 0.3, '#ffd28a', 1.1);
-          if (p.grounded && Math.abs(p.x - b.x) < 5.2) this.hurt(b.x);
+          this.fx.ring(b.x, 0.15, 0, 0xffd28a, 3.4, 0.5); this.fx.dust(b.x, 0, 0, 16); this.fx.sparkle(b.x, 0.6, 0, 0xd8b27a, 14, 3); this.fx.text('FEATHER QUAKE!', b.x, 2.8, 0.3, '#ffd28a', 1.1);
+          if (p.grounded && Math.abs(p.x - b.x) < 3.2) this.hurt(b.x);
         }
         break;
       }
       case 'defeated':
-        b.vy -= 22 * dt; b.y = Math.max(0, b.y + b.vy * dt); b.vx = 9; b.facing = 1;
-        r.root.rotation.z = Math.min(Math.PI, b.t * 8) * (b.t < 1.2 ? 1 : 0);
-        if (b.t > 1.2 && Math.random() < dt * 12) this.fx.dust(b.x, 0, 0, 2, -1);
+        b.vy = damp(b.vy, 3.2, 2, dt); b.y += b.vy * dt; b.vx = 8; b.facing = 1;
+        r.root.rotation.z = Math.sin(b.t * 6) * 0.12;
+        if (Math.random() < dt * 10) this.fx.sparkle(b.x - 0.6, b.y + 1.2, 0, 0xd8b27a, 2, 1.5);
+        if (b.y > 14) { b.state = 'gone'; b.done = true; r.root.visible = false; this.ui.bossBar?.(null); }
         if (b.x > WORLD.JESS_X + 22) { b.state = 'gone'; b.done = true; r.root.visible = false; this.ui.bossBar?.(null); }
         if (b.t > 1.4) { b.done = true; this.ui.bossBar?.(null); }
         break;
@@ -640,7 +649,8 @@ export class Game {
     // contact
     if (this.state === 'playing' && !b.done && b.state !== 'defeated' && b.state !== 'enter' && Math.abs(p.x - b.x) < 1.35 && p.y < 1.45 + b.y) {
       if (p.rollT > 0 || p.puppyT > 0 || p.mortyT > 0) { if (b.invT <= 0) { this.damageBoss(1, p.rollT > 0 ? 'ROLL!' : 'BONK!'); p.vx = -toP * 6; p.vy = 6; p.grounded = false; p.rollT = 0; } }
-      else if (b.state !== 'stunned') { this.hurt(b.x); p.vx = toP * 7; }
+      else if (b.state === 'charge') { this.hurt(b.x); p.vx = toP * 7; }
+      else if (b.state !== 'stunned' && p.invT <= 0) { p.vx = toP * 5; if (p.grounded) { p.vy = 4; p.grounded = false; } }
     }
     if (b.hitT <= 0) this.ui.bossBar?.(b.done ? null : b.hp / C.BOSS_HP, false);
   }

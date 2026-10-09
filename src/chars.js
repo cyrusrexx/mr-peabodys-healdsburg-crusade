@@ -1644,6 +1644,128 @@ export function makeBoar() {
   return { root, update };
 }
 
+// ───────────────────────── BOSS: TOM, THE GIANT WILD TURKEY ─────────────────────────
+// Rio Grande / Merriam's wild turkeys strut through Healdsburg's vineyards, parks and front lawns.
+export function makeTurkey() {
+  critterMats();
+  M.tFeather ||= std(0x2a1c10, { roughness: 0.7 });
+  M.tSheen ||= std(0x1e140c, { roughness: 0.4, metalness: 0.25 });
+  M.tTip ||= std(0xd8b27a, { roughness: 0.75 });
+  M.tBand ||= std(0x1a120c, { roughness: 0.8 });
+  M.tBar ||= std(0xece4d4, { roughness: 0.8 });
+  M.tRed ||= std(0xc8302a, { roughness: 0.5 });
+  M.tBeak ||= std(0xd9c8a0, { roughness: 0.4 });
+  M.tLeg ||= std(0xb8705e, { roughness: 0.6 });
+  M.bristle ||= std(0x1c1714, { roughness: 0.95 });
+  M.star ||= new THREE.MeshBasicMaterial({ color: 0xffe14a });
+  const root = new THREE.Group();
+  const yaw = group(root); const body = group(yaw, [0, 0.42, 0]);
+  const neck = group(body, [0.12, 0.05, 0]);
+  const tail = group(body, [-0.16, 0.06, 0]);
+  const legs = [group(body, [0.02, -0.11, 0.055]), group(body, [0.02, -0.11, -0.055])];
+  const S = [
+    { bone: body, ell: [0, 0, 0], r: [0.18, 0.15, 0.13], k: 0.06, tag: 'torso' },
+    { bone: body, ell: [0.09, -0.02, 0], r: [0.12, 0.135, 0.115], k: 0.06, tag: 'breast' },
+    { bone: body, ell: [-0.12, 0.02, 0], r: [0.1, 0.1, 0.1], k: 0.06, tag: 'torso' },
+    { bone: neck, cone: [0, 0, 0, 0.06, 0.17, 0], r: [0.05, 0.026], k: 0.03, tag: 'neck' },
+    { bone: neck, ell: [0.075, 0.19, 0], r: [0.042, 0.036, 0.033], k: 0.025, tag: 'head' },
+  ];
+  for (const l of legs) {
+    S.push({ bone: l, ell: [0, 0.02, 0], r: [0.055, 0.065, 0.042], k: 0.04, tag: 'thigh' });
+    S.push({ bone: l, cone: [0, -0.02, 0, 0.01, -0.27, 0], r: [0.027, 0.018], k: 0.015, tag: 'leg' });
+  }
+  const K1 = lin(0x0b0704), Cu = lin(0x3c2210), Gr = lin(0x16221a), Rd = lin(0xc23a30), Bl = lin(0x8fb6dc), Wh = lin(0xe8eef5), Lg = lin(0xb8705e);
+  sculptSkinned(root, S, M.critter, {
+    step: 0.0085, sigma: 0.014, cacheKey: 'turkey',
+    colorFn: (x, y, z, nx, ny, nz, P) => {
+      const n = 0.85 + fnoise(x, y, z) * 0.3, t = P.tag;
+      if (t === 'leg') return mul3(Lg, n);
+      if (t === 'neck' || t === 'head') {
+        let c = mix3(Rd, Bl, sat((y - 0.54) / 0.1));
+        c = mix3(c, Wh, sat((y - 0.64) / 0.04));
+        return mul3(c, 0.95 + fnoise(x * 3, y * 3, z * 3) * 0.1);
+      }
+      // iridescent bronze body: dark feathers, copper scalloped tips, green sheen on top
+      const g = fnoise(x * 5.5, y * 5.5, z * 5.5);
+      const scal = sat(Math.sin(x * 120 + Math.sin(z * 90) * 2) * 0.5 + Math.sin(y * 110) * 0.5);
+      let c = mix3(K1, Cu, sat(g * 1.4 - 0.3) * 0.5 + scal * 0.35);
+      if (ny > 0.35) c = mix3(c, Gr, 0.45);
+      if (ny < -0.5) c = mix3(c, lin(0x1c140e), 0.5);
+      return mul3(c, n);
+    },
+  });
+  // head bits: beak, snood, wattle, caruncles, eyes
+  add(neck, G.cone, M.tBeak, [0.122, 0.188, 0], [0.013, 0.04, 0.013], [0, 0, -Math.PI / 2]);
+  const snood = add(neck, G.cone, M.tRed, [0.112, 0.17, 0], [0.009, 0.075, 0.009], [0, 0, Math.PI * 0.94]);
+  add(neck, G.sphereLo, M.tRed, [0.085, 0.135, 0], [0.022, 0.048, 0.019]);
+  for (let i = 0; i < 5; i++) add(neck, G.sphereLo, M.tRed, [0.035 + i * 0.008, 0.05 + i * 0.022, (i % 2 ? 1 : -1) * 0.028], 0.013, [0, 0, 0], false);
+  const eyes = [eye(neck, [0.09, 0.205, 0.03], 0.009, 0x1a1210), eye(neck, [0.09, 0.205, -0.03], 0.009, 0x1a1210)];
+  // beard tuft on the breast
+  add(body, G.cone, M.bristle, [0.18, -0.03, 0], [0.016, 0.12, 0.012], [0, 0, Math.PI + 0.25]);
+  // wings with barred flight feathers
+  const wings = [];
+  for (const s of [1, -1]) {
+    const w = group(body, [0.02, 0.04, 0.12 * s]);
+    add(w, G.sphere, M.tSheen, [-0.03, 0, 0], [0.15, 0.08, 0.03]);
+    for (let i = 0; i < 6; i++) add(w, G.sphereLo, i % 2 ? M.tBar : M.tFeather, [-0.07 - i * 0.022, -0.05 + i * 0.004, 0.012 * s], [0.055, 0.011, 0.012], [0, 0, 0.25]);
+    wings.push(w);
+  }
+  // toes
+  for (const l of legs) for (const a of [-0.5, 0, 0.5]) add(l, G.cone, M.tLeg, [0.03 + Math.cos(a) * 0.02, -0.285, Math.sin(a) * 0.03], [0.008, 0.07, 0.008], [a, 0, -Math.PI / 2]);
+  // the tail fan: 13 feathers on pivots so it can fold (strut) or spread (display)
+  const fan = group(tail, [0, 0, 0]);
+  const feathers = [];
+  for (let i = 0; i < 13; i++) {
+    const a = (i / 12 - 0.5) * 2.9;
+    const piv = group(fan); piv.userData.a = a;
+    add(piv, G.sphereLo, M.tFeather, [0, 0.13, 0], [0.008, 0.13, 0.04], [0, 0, 0], false);
+    add(piv, G.sphereLo, M.tBand, [0, 0.245, 0], [0.0085, 0.025, 0.04], [0, 0, 0], false);
+    add(piv, G.sphereLo, M.tTip, [0, 0.275, 0], [0.009, 0.03, 0.042], [0, 0, 0], false);
+    feathers.push(piv);
+  }
+  // dizzy stars
+  const stars = group(neck, [0.07, 0.3, 0]);
+  const starG = new THREE.OctahedronGeometry(0.03, 0);
+  for (let i = 0; i < 4; i++) add(stars, starG, M.star, [Math.cos(i * 1.57) * 0.12, 0, Math.sin(i * 1.57) * 0.12], 1, [0, 0, 0], false);
+  stars.visible = false;
+  const shadow = blobShadow(1.0); root.add(shadow);
+  const st = { yaw: 0, ph: 0, t: 0, sq: 1, spread: 0.3, flap: 0 };
+  function update(dt, b) {
+    st.t += dt;
+    st.yaw = damp(st.yaw, faceAngle(b.facing), b.state === 'charge' ? 5 : 9, dt); yaw.rotation.y = st.yaw;
+    const sp = Math.abs(b.vx), flying = b.state === 'defeated' || b.state === 'stomp';
+    st.ph += dt * (3 + sp * 2.2);
+    const s = Math.sin(st.ph) * Math.min(1, sp / 1.0) * 0.8;
+    legs[0].rotation.z = flying ? 0.5 : s; legs[1].rotation.z = flying ? 0.5 : -s;
+    body.position.y = 0.42 + Math.abs(Math.sin(st.ph)) * Math.min(1, sp / 3) * 0.03;
+    // head bob while walking, low and forward while charging
+    let nz = Math.sin(st.ph * 2) * 0.12 * Math.min(1, sp), nx = 0, bz = 0;
+    if (b.state === 'windup') { nz = 0.15 + Math.sin(st.t * 22) * 0.12; bz = 0.1; } // GOBBLE
+    if (b.state === 'charge') { nz = -0.75; bz = -0.18; }
+    if (b.state === 'stunned') { nz = 0.2 + Math.sin(st.t * 5) * 0.15; nx = Math.sin(st.t * 4) * 0.35; bz = Math.sin(st.t * 6) * 0.05; }
+    neck.rotation.z = damp(neck.rotation.z, nz, 12, dt); neck.rotation.x = damp(neck.rotation.x, nx, 10, dt);
+    body.rotation.z = damp(body.rotation.z, flying ? 0.15 : bz, 10, dt);
+    snood.rotation.z = Math.PI * 0.94 + Math.sin(st.t * 9) * 0.15;
+    // tail fan spreads to display when it gobbles / is angry, folds to strut otherwise
+    const want = b.state === 'windup' || b.state === 'idle' && b.hp < b.hpMax / 2 ? 1 : b.state === 'charge' ? 0.15 : 0.45;
+    st.spread = damp(st.spread, want, 6, dt);
+    for (const f of feathers) f.rotation.x = f.userData.a * st.spread;
+    fan.rotation.y = -1.2 - yaw.rotation.y;            // fan plane turned toward the camera so it reads
+    fan.rotation.z = (1 - st.spread) * 0.9;              // folded fan tips back
+    fan.scale.setScalar(0.7 + st.spread * 0.45);
+    // wings: tucked, half out on the charge, full flaps when hopping / flying off
+    const flapA = flying ? Math.sin(st.t * 24) * 1.1 : b.state === 'charge' ? 0.35 + Math.sin(st.t * 16) * 0.2 : b.state === 'windup' ? -0.15 : 0;
+    st.flap = damp(st.flap, flapA, 18, dt);
+    wings[0].rotation.x = -st.flap; wings[1].rotation.x = st.flap;
+    stars.visible = b.state === 'stunned'; stars.rotation.y = st.t * 5;
+    st.sq = damp(st.sq, b.hitT > 0 ? 0.82 : b.state === 'windup' ? 1.08 : 1, 30, dt);
+    body.scale.set(1 / Math.sqrt(st.sq), st.sq, 1 / Math.sqrt(st.sq));
+    for (const e of eyes) e.scale.y = b.state === 'stunned' ? 0.3 : 1;
+    shadow.visible = b.state !== 'gone';
+  }
+  return { root, update };
+}
+
 // ───────────────────────── BENCH PEOPLE (painted cutouts, same art style as Jessica) ─────────────────────────
 const BENCH_ART = [
   { src: '__BENCH_GRANDPA__', ar: 425 / 640, food: 'hotdog' },
