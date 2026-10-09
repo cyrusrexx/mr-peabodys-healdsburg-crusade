@@ -1,0 +1,15 @@
+{
+  "name": "mr-peabodys-healdsburg-crusade-hd",
+  "version": "2.0.0",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "npx serve dist -l 3000"
+  },
+  "license": "ISC",
+  "description": "Mr. Peabody's Healdsburg Crusade HD - Three.js side-scroller",
+  "dependencies": {
+    "esbuild": "^0.28.2",
+    "three": "^0.170.0"
+  },
+  "private": true
+}
