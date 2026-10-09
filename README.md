@@ -16,6 +16,8 @@ npm start            # serves dist/ at http://localhost:3000  (add ?debug for th
 - Static site. Build command `npm run build`, output directory `dist`.
 - `dist/peabody-crusade.mp3` must sit next to `dist/index.html` (the music streams from it).
 - Everything else (JS, textures, character art, bark sound) is inlined into `index.html`.
+- Works from a sub-folder (e.g. `cyrusrex.com/peabodyHD`): `src/audio.js` resolves the mp3 next to `index.html` even when the URL has no trailing slash.
+- Uses Google Fonts (Fredoka, Nunito, Playfair Display, Parisienne, Josefin Sans, Roboto Slab). If a Content-Security-Policy is added, allow `https://fonts.googleapis.com` (style) and `https://fonts.gstatic.com` (font), plus `data:` and `blob:` for images/media.
 
 ## Hard requirements — please keep these
 

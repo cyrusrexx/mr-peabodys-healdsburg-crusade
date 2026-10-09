@@ -2,7 +2,10 @@
 let ac = null, master = null, sfxBus = null, verb = null;
 export let muted = false;
 
-export const bgMusic = new Audio('peabody-crusade.mp3');
+// Resolve the music next to index.html even when served from a folder URL without a
+// trailing slash (e.g. cyrusrex.com/peabodyHD, where a bare relative path would hit the site root).
+const MUSIC_BASE = (() => { const p = location.pathname; return /\/$|\.[a-z0-9]+$/i.test(p) ? '' : p.split('/').pop() + '/'; })();
+export const bgMusic = new Audio(MUSIC_BASE + 'peabody-crusade.mp3');
 bgMusic.loop = true;
 bgMusic.volume = 0.38;
 bgMusic.preload = 'auto';
