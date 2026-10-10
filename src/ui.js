@@ -1,6 +1,7 @@
 import { WORLD, TREATS, TREAT_PICKS } from './world.js';
 import { input, clearJustPressed, justPressed, isTouchDevice } from './input.js';
-import { sfx, toggleMute, muted } from './audio.js';
+import { sfx, toggleMute, muted, setMusicLevel, getMusicLevel } from './audio.js';
+import { SKILLS } from './game.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -28,7 +29,22 @@ const ICON = {
   shake: '<svg viewBox="0 0 32 32"><path d="M9 11h14l-2 18H11z" fill="#ff9fc0"/><path d="M8 9h16v3H8z" fill="#fff"/><circle cx="16" cy="7" r="4" fill="#fff"/><circle cx="16" cy="3.5" r="2" fill="#e0352b"/><rect x="18" y="0" width="2" height="9" transform="rotate(20 19 4)" fill="#4fc3f7"/></svg>',
   sound: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
   mute: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9l6 6M22 9l-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5.5" y="4.5" width="4.6" height="15" rx="1.5"/><rect x="13.9" y="4.5" width="4.6" height="15" rx="1.5"/></svg>',
 };
+
+// A slider for the pause panel: drag or tap along it, or ← → on the keys. A <div role="slider">, never an <input>, so
+// no phone ever offers its keyboard for it. steps: how many positions; get/set the value, 0..1.
+function slider(el, { steps, get, set, render }) {
+  const pick = (x) => {
+    const r = el.getBoundingClientRect();
+    const v = Math.max(0, Math.min(1, (x - r.left) / r.width));
+    set(Math.round(v * (steps - 1)) / (steps - 1));
+    render();
+  };
+  el.addEventListener('pointerdown', (e) => { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (err) {} pick(e.clientX); });
+  el.addEventListener('pointermove', (e) => { if (el.hasPointerCapture && el.hasPointerCapture(e.pointerId)) pick(e.clientX); });
+  return { step: (d) => { set(Math.max(0, Math.min(steps - 1, Math.round(get() * (steps - 1)) + d)) / (steps - 1)); render(); } }; // on the grid, so 60% is always exactly the game's own level
+}
 
 const POWERS = [
   { k: 'kickT', label: 'KICK', max: 8, col: '#ff8a3d' },
@@ -66,6 +82,7 @@ export class UI {
     const mb = $('mute-btn');
     mb.innerHTML = ICON.sound;
     mb.addEventListener('click', (e) => { e.stopPropagation(); const m = toggleMute(); mb.innerHTML = m ? ICON.mute : ICON.sound; });
+    this.buildPause();
     this.renderBoard();
     // phone "How to play" sheet
     const closeSheet = (e) => { if (e) e.stopPropagation(); document.body.classList.remove('guide-open'); };
@@ -92,6 +109,44 @@ export class UI {
       }
     }
   }
+  // ── pause panel: Resume, difficulty, music volume ──
+  buildPause() {
+    $('pause-btn').innerHTML = ICON.pause;
+    $('pause-btn').addEventListener('click', (e) => { e.stopPropagation(); this.game?.setPaused(true); });
+    $('pz-resume').addEventListener('click', (e) => { e.stopPropagation(); this.game?.setPaused(false); });
+    this.pz = { sel: 0 };
+    const last = SKILLS.length - 1, render = () => this.renderPause();
+    this.sliders = [null,
+      slider($('pz-diff'), { steps: SKILLS.length, get: () => (this.game ? this.game.skill / last : 0.5), set: (v) => this.game?.setSkill(v * last), render }),
+      slider($('pz-music'), { steps: 21, get: getMusicLevel, set: setMusicLevel, render }),
+    ];
+    // touching a row makes it the one the keys work on
+    document.querySelectorAll('#pause .pz-row').forEach((r) => r.addEventListener('pointerdown', () => { if (this.pz.sel !== +r.dataset.row) { this.pz.sel = +r.dataset.row; this.renderPause(); } }));
+  }
+  showPause(on) {
+    document.body.classList.toggle('paused', on);
+    if (on) { this.pz.sel = 0; this.renderPause(); }
+  }
+  renderPause() {
+    const g = this.game; if (!g) return;
+    const sk = SKILLS[g.skill], dv = g.skill / (SKILLS.length - 1), mv = getMusicLevel(), pct = Math.round(mv * 100), mt = mv <= 0 ? 'Off' : pct + '%';
+    const put = (id, v, now, text) => { const el = $(id); el.querySelector('.pz-fill').style.transform = `scaleX(${v})`; el.querySelector('.pz-knob').style.left = (v * 100) + '%'; el.setAttribute('aria-valuenow', now); el.setAttribute('aria-valuetext', text); };
+    put('pz-diff', dv, g.skill, sk.name); $('pz-diff-val').textContent = sk.name; $('pz-about').textContent = sk.about;
+    document.querySelectorAll('#pause .pz-marks span').forEach((s, i) => s.classList.toggle('on', i === g.skill));
+    put('pz-music', mv, pct, mt); $('pz-music-val').textContent = mt;
+    document.querySelectorAll('#pause .pz-row').forEach((r) => r.classList.toggle('sel', +r.dataset.row === this.pz.sel));
+  }
+  // keys while paused: P, Space or Enter resume; ↑ ↓ choose a row; ← → change it
+  tickPause(g) {
+    const J = justPressed;
+    if (J.KeyP || J.Space || J.Enter) { g.setPaused(false); return; }
+    const v = (J.ArrowDown || J.KeyS ? 1 : 0) - (J.ArrowUp || J.KeyW ? 1 : 0);
+    if (v) { this.pz.sel = (this.pz.sel + v + 3) % 3; sfx.ui(); this.renderPause(); }
+    const d = (J.ArrowRight || J.KeyD ? 1 : 0) - (J.ArrowLeft || J.KeyA ? 1 : 0);
+    if (d && this.sliders[this.pz.sel]) { this.sliders[this.pz.sel].step(d); sfx.ui(); }
+    clearJustPressed();
+  }
+
   skipInitials() {
     if (this.game?.state !== 'initials') return;
     sfx.ui();
@@ -118,7 +173,9 @@ export class UI {
     const combo = p.combo > 1 ? `×${p.combo}<span> COMBO</span>` : '';
     this.set('combo', combo, 'innerHTML');
     if (this.cache.comboOn !== p.combo > 1) { this.cache.comboOn = p.combo > 1; $('combo').classList.toggle('on', p.combo > 1); $('score').parentElement.classList.toggle('combo', p.combo > 1); }
-    for (let i = 0; i < 3; i++) { const el = document.querySelector(`.life[data-i="${i}"]`); const on = i < p.lives; if (el.dataset.on !== String(on)) { el.dataset.on = on; el.classList.toggle('lost', !on); } }
+    // hearts: full, half (a hit on Easy costs half a heart) or lost
+    for (let i = 0; i < 3; i++) { const el = document.querySelector(`.life[data-i="${i}"]`); const v = p.lives - i, st = v >= 1 ? 'full' : v > 0 ? 'half' : 'lost'; if (el.dataset.st !== st) { el.dataset.st = st; el.classList.toggle('lost', st === 'lost'); el.classList.toggle('half', st === 'half'); } }
+    const cp = g.state === 'playing'; if (this.cache.canPause !== cp) { this.cache.canPause = cp; document.body.classList.toggle('can-pause', cp); }
     const st = Math.round(p.stamina);
     if (this.cache.st !== st) {
       this.cache.st = st;
@@ -272,6 +329,8 @@ export class UI {
   // per-frame input routing for non-gameplay screens
   tick(g, dt) {
     this.game = g;
+    if (g.paused) { this.tickPause(g); return; }
+    if (g.state === 'playing' && justPressed.KeyP) { g.setPaused(true); return; }
     if (this.endReadyT > 0) { this.endReadyT -= dt; $('end-btn').classList.toggle('ready', this.endReadyT <= 0); }
     if (g.state === 'menu') {
       if (justPressed.Space || justPressed.Enter) { sfx.uiConfirm(); g.startGame(); }

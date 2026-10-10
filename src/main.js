@@ -12,7 +12,7 @@ import { FX } from './fx.js';
 import { Game } from './game.js';
 import { UI } from './ui.js';
 import { initInput, isMobile, isPhone, setGestureHandler, clearJustPressed, justPressed, keys, grabFocus } from './input.js';
-import { initAudio, setMusic } from './audio.js';
+import { initAudio, setMusic, setMusicLevel, musicState } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 const progress = (v, label) => { $('load-fill').style.transform = `scaleX(${v})`; if (label) $('load-label').textContent = label; };
@@ -152,7 +152,9 @@ async function boot() {
   // debug / testing hooks
   window.render_game_to_text = () => game.renderToText();
   let manual = false;
-  window.advanceTime = (ms) => { manual = true; const steps = Math.max(1, Math.round(ms / (1000 / 60))); for (let i = 0; i < steps; i++) { ui.tick(game, 1 / 60); game.update(1 / 60); env.update(game.t, camera.position.x, game.p.x); fx.update(1 / 60, window.innerWidth, window.innerHeight); } render(); };
+  window.advanceTime = (ms) => { manual = true; const steps = Math.max(1, Math.round(ms / (1000 / 60))); for (let i = 0; i < steps; i++) { ui.tick(game, 1 / 60); if (game.paused) { clearJustPressed(); continue; } game.update(1 / 60); env.update(game.t, camera.position.x, game.p.x); fx.update(1 / 60, window.innerWidth, window.innerHeight); } render(); };
+  // leaving the page mid-run pauses it, so the player comes back to the pause panel
+  document.addEventListener('visibilitychange', () => { if (document.hidden) game.setPaused(true); });
   // touch cheat: tap the progress bar at the top 5 times quickly → warp to the final quarter
   { let taps = []; const tr = document.querySelector('.track');
     if (tr) tr.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); const n = performance.now(); taps = taps.filter((t) => n - t < 2500); taps.push(n); if (taps.length >= 5) { taps = []; game.cheatWarp(); } }); }
@@ -171,6 +173,9 @@ async function boot() {
     spawnChicken: () => game.spawnChicken(), tier: (i) => { tierIdx = i; buildComposer(); },
     resume: () => { manual = false; },
     photo: (a) => { game.photo = a; },
+    pause: (on = true) => { game.setPaused(on); return game.paused; },
+    difficulty: (i) => { if (i !== undefined) { game.setSkill(i); ui.renderPause(); } return game.sk.id; },
+    music: (level) => { if (level !== undefined) { setMusicLevel(level); ui.renderPause(); } return musicState(); },
   };
   if (/[?&]debug/.test(location.search)) $('fps').classList.add('on');
 
@@ -191,6 +196,7 @@ async function boot() {
     if (manual) return;
     if (justPressed.Backquote) $('fps').classList.toggle('on');
     ui.tick(game, dt);
+    if (game.paused) { clearJustPressed(); frames = 0; fpsT = 0; return; } // the clock stands still; the last frame stays on screen
     game.update(dt);
     env.update(game.t, camera.position.x, game.p.x);
     fx.update(dt, window.innerWidth, window.innerHeight);

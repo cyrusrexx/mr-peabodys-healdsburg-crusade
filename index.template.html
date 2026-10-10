@@ -129,6 +129,11 @@ body[data-mode="hud"] #hud, body[data-mode="shop"] #hud{display:block}
 #mute-btn{pointer-events:auto!important;width:44px;height:44px;border-radius:50%;background:var(--panel);border:3px solid #fff;box-shadow:var(--shadow);color:#7a2a0e;display:flex;align-items:center;justify-content:center;position:fixed;right:calc(16px + var(--safe-r));top:calc(66px + var(--safe-t));z-index:40}
 #mute-btn svg{width:22px;height:22px}
 body[data-mode="loading"] #mute-btn{display:none}
+#pause-btn{pointer-events:auto!important;width:44px;height:44px;border-radius:50%;background:var(--panel);border:3px solid #fff;box-shadow:var(--shadow);color:#7a2a0e;display:none;align-items:center;justify-content:center;position:fixed;right:calc(68px + var(--safe-r));top:calc(66px + var(--safe-t));z-index:40;-webkit-tap-highlight-color:transparent}
+#pause-btn svg{width:20px;height:20px}
+body.can-pause[data-mode="hud"]:not(.paused) #pause-btn{display:flex}
+body.paused #mute-btn{z-index:65} /* sound stays in reach over the pause panel's shade */
+.life.half svg{fill:url(#half-heart)}
 .track::after{content:"";position:absolute;inset:-14px -6px}
 .track{pointer-events:auto;cursor:pointer;-webkit-tap-highlight-color:transparent;position:absolute;left:50%;top:calc(22px + var(--safe-t));transform:translateX(-50%);width:min(24vw,360px);height:12px;border-radius:99px;background:rgba(40,20,10,.35);box-shadow:0 0 0 3px rgba(255,255,255,.85)}
 #track-fill{position:absolute;inset:0;border-radius:99px;background:linear-gradient(90deg,#ffd34d,#ff7a3d);transform-origin:left}
@@ -198,6 +203,43 @@ body[data-mode="initials"] #initials{display:flex;pointer-events:auto}
 .arr{font-size:20px;width:52px;height:38px;border-radius:12px;background:linear-gradient(180deg,#ffd34d,#ffb347);color:#7a2a0e;box-shadow:0 3px 0 #c27a1a}
 .ini-done{font-size:22px;font-weight:700;color:#fff;padding:14px 18px;border-radius:16px;background:linear-gradient(180deg,#5fe0a8,#2fa86e);box-shadow:0 4px 0 #1d6e46;margin-left:6px}
 .ini-done.cur{box-shadow:0 4px 0 #1d6e46,0 0 0 4px #ff7a3d}
+
+/* ───────── pause ───────── */
+#pause{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:calc(10px + var(--safe-t)) calc(10px + var(--safe-r)) calc(10px + var(--safe-b)) calc(10px + var(--safe-l));background:radial-gradient(ellipse at center,rgba(40,15,30,.2),rgba(40,15,30,.62));pointer-events:auto}
+body.paused #pause{display:flex}
+body.paused #touch-controls,body.paused #gesture-hint,body.paused #drag-ui{display:none!important}
+.pz-card{width:min(440px,100%);max-height:100%;overflow:auto;padding:16px 20px 14px;text-align:center;animation:pop .35s cubic-bezier(.2,1.5,.4,1)}
+.pz-card h2{justify-content:center;font-size:clamp(24px,3vw,34px);color:#7a2a0e;letter-spacing:2px;margin-bottom:.35em}
+#pz-resume{display:block;width:100%;font-size:22px;font-weight:700;color:#fff;padding:9px 20px 10px;border-radius:999px;background:linear-gradient(180deg,#ffb347,#ff6a2b);box-shadow:0 5px 0 #a83a12,0 0 0 3px #fff inset;text-shadow:0 2px 0 #a83a12;letter-spacing:1px;margin-bottom:12px}
+#pz-resume:active{transform:translateY(3px);box-shadow:0 2px 0 #a83a12,0 0 0 3px #fff inset}
+#pz-resume small{font-family:var(--body);font-size:11px;font-weight:800;opacity:.9;margin-left:8px;letter-spacing:.5px}
+body.phone #pz-resume small,body.phone .pz-hint{display:none}
+.pz-row{border-radius:16px;transition:box-shadow .15s,background .15s}
+.pz-set{display:grid;grid-template-columns:auto 1fr 3.9em;align-items:center;gap:4px 12px;padding:8px 10px;margin-top:4px;text-align:left}
+.pz-row.sel{box-shadow:0 0 0 3px rgba(255,122,61,.55);background:rgba(255,255,255,.75)}
+#pz-resume.sel{box-shadow:0 5px 0 #a83a12,0 0 0 3px #fff inset,0 0 0 6px rgba(255,122,61,.45)}
+.pz-lbl{font-family:var(--display);font-weight:700;font-size:16px;color:#b4401a;letter-spacing:.5px}
+.pz-val{font-family:var(--display);font-weight:700;font-size:15px;color:var(--ink);text-align:right;white-space:nowrap}
+.pz-slider{position:relative;height:36px;cursor:pointer;touch-action:none;outline:none;-webkit-tap-highlight-color:transparent}
+.pz-slider::before{content:"";position:absolute;left:0;right:0;top:50%;height:12px;margin-top:-6px;border-radius:99px;background:rgba(40,20,10,.22);box-shadow:0 0 0 3px #fff}
+.pz-fill{position:absolute;left:0;right:0;top:50%;height:12px;margin-top:-6px;border-radius:99px;background:linear-gradient(90deg,#ffd34d,#ff7a3d);transform-origin:left;transform:scaleX(.6)}
+.pz-knob{position:absolute;top:50%;left:60%;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#ffe1bd 70%);box-shadow:0 3px 0 #c27a1a,0 0 0 3px #ff7a3d;pointer-events:none}
+.pz-steps i.pz-dot{position:absolute;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px rgba(122,42,14,.35);pointer-events:none}
+.pz-marks{grid-column:2;display:flex;justify-content:space-between;margin-top:-6px;font-family:var(--display);font-weight:600;font-size:11px;color:#7a5a44}
+.pz-marks span{flex:0 0 auto;width:4.6em;text-align:center}
+.pz-marks span:first-child{text-align:left;margin-left:-.4em} .pz-marks span:last-child{text-align:right;margin-right:-.4em}
+.pz-marks span.on{color:#d8342a}
+.pz-about{grid-column:1/-1;font-weight:700;font-size:12px;line-height:1.3;color:#7a5a44;min-height:2.6em}
+.pz-hint{margin-top:8px;font-size:11.5px;font-weight:800;color:#7a5a44}
+@media (max-height:520px){
+  .pz-card{width:min(520px,100%);padding:10px 16px 10px}
+  .pz-card h2{font-size:22px;margin-bottom:.2em}
+  #pz-resume{font-size:18px;padding:6px 18px 7px;margin-bottom:6px}
+  .pz-set{padding:4px 10px;margin-top:2px}
+  .pz-slider{height:32px}
+  .pz-about{min-height:0}
+  .pz-hint{margin-top:4px}
+}
 
 /* ───────── touch controls ───────── */
 #touch-controls{position:fixed;inset:auto 0 0 0;height:0;z-index:35;display:none}
@@ -283,6 +325,8 @@ body[data-mode="loading"] #site-logo{display:none}
   .track{top:calc(14px + var(--safe-t));left:calc(34px + var(--safe-l) + var(--logo) + min(330px,30vw));right:calc(132px + var(--safe-r));width:auto;transform:none}
   .hud-tr{top:calc(8px + var(--safe-t));right:calc(10px + var(--safe-r))}
   #mute-btn{top:calc(62px + var(--safe-t));right:calc(10px + var(--safe-r));width:36px;height:36px}
+  #pause-btn{top:calc(62px + var(--safe-t));right:calc(54px + var(--safe-r));width:36px;height:36px}
+  #pause-btn svg{width:16px;height:16px}
   #bossbar{top:calc(6px + var(--safe-t));left:calc(28px + var(--safe-l) + var(--logo) + min(330px,30vw));right:calc(126px + var(--safe-r));width:auto;transform:translateY(-8px)}
   #bossbar.on{transform:none}
   body.boss-on .track{visibility:hidden}
@@ -380,11 +424,12 @@ body.phone .ps-foot .keys{display:none}
 @media (max-width:760px) and (orientation:portrait){
   :root{--logo:36px}
   #site-logo{left:calc(12px + var(--safe-l));top:calc(8px + var(--safe-t));border-radius:11px}
-  .track{left:calc(24px + var(--safe-l) + var(--logo));right:calc(72px + var(--safe-r));width:auto;transform:none;top:calc(20px + var(--safe-t))}
+  .track{left:calc(24px + var(--safe-l) + var(--logo));right:calc(124px + var(--safe-r));width:auto;transform:none;top:calc(20px + var(--safe-t))}
   #mute-btn{top:calc(4px + var(--safe-t))}
+  #pause-btn{top:calc(4px + var(--safe-t))}
   .hud-tl{top:calc(56px + var(--safe-t));left:calc(16px + var(--safe-l));width:min(232px,calc(100vw - 160px))}
   .hud-tr{top:calc(56px + var(--safe-t))}
-  #bossbar{top:calc(4px + var(--safe-t));left:calc(24px + var(--safe-l) + var(--logo));right:calc(72px + var(--safe-r));width:auto;transform:translateY(-8px)}
+  #bossbar{top:calc(4px + var(--safe-t));left:calc(24px + var(--safe-l) + var(--logo));right:calc(124px + var(--safe-r));width:auto;transform:translateY(-8px)}
   #bossbar.on{transform:none}
   #bossbar b{font-size:11px;letter-spacing:1px}
   body.boss-on .track{visibility:hidden}
@@ -468,6 +513,29 @@ body.phone .ps-foot .keys{display:none}
   <div id="prompt"></div>
 </div>
 <button id="mute-btn" aria-label="Toggle sound"></button>
+<button id="pause-btn" aria-label="Pause (P)" title="Pause (P)"></button>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><linearGradient id="half-heart"><stop offset=".5" stop-color="#ff4d6d"/><stop offset=".5" stop-color="#c9b8a8"/></linearGradient></defs></svg>
+
+<!-- PAUSE -->
+<div id="pause" role="dialog" aria-modal="true" aria-labelledby="pz-title">
+  <div class="pz-card card">
+    <h2 id="pz-title">PAUSED</h2>
+    <button id="pz-resume" class="pz-row" data-row="0">RESUME<small>P · Space</small></button>
+    <div class="pz-row pz-set" data-row="1">
+      <span class="pz-lbl">Difficulty</span>
+      <div id="pz-diff" class="pz-slider pz-steps" role="slider" tabindex="-1" aria-label="Difficulty" aria-valuemin="0" aria-valuemax="2" aria-valuenow="1" aria-valuetext="Normal"><i class="pz-fill"></i><i class="pz-dot" style="left:0"></i><i class="pz-dot" style="left:50%"></i><i class="pz-dot" style="left:100%"></i><b class="pz-knob"></b></div>
+      <span class="pz-val" id="pz-diff-val">Normal</span>
+      <div class="pz-marks"><span>Easy</span><span>Normal</span><span>Hard</span></div>
+      <p class="pz-about" id="pz-about"></p>
+    </div>
+    <div class="pz-row pz-set" data-row="2">
+      <span class="pz-lbl">Music</span>
+      <div id="pz-music" class="pz-slider" role="slider" tabindex="-1" aria-label="Music volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60" aria-valuetext="60%"><i class="pz-fill"></i><b class="pz-knob"></b></div>
+      <span class="pz-val" id="pz-music-val">60%</span>
+    </div>
+    <p class="pz-hint">↑ ↓ choose · ← → change · P or Space to resume</p>
+  </div>
+</div>
 
 <!-- SHOP -->
 <div id="shop" class="screen">

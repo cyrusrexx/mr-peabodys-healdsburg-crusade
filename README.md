@@ -37,6 +37,7 @@ npm start            # serves dist/ at http://localhost:3000  (add ?debug for th
 | Space | Chop / kick. In the air it's a flying side kick |
 | ↓ | Nap on a dog bed; pee once the burger is bought (permanent) |
 | ← or EXIT SHOP | Leave Iggy's Burgers |
+| P or the pause button | Pause (the clock stops, the music plays on, quieter). P, Space or RESUME to go on; on the panel ↑/↓ choose, ←/→ change. Leaving the page pauses too |
 | Pet shop | ←/→ choose, Space take, ↓ or LEAVE SHOP to leave |
 
 On a touch screen the buttons sit in the bottom corners and the gesture tips show, for the first two runs of a visit, in the space between them (above them on a phone held upright), never over the HUD. The game plays held upright or sideways; it doesn't ask to be turned. The site's logo (Cyrusrex), top left, links to the site's home (`/`).
@@ -62,8 +63,9 @@ On a touch screen the buttons sit in the bottom corners and the gesture tips sho
 | Town geometry, facades, awnings, benches | `src/env.js` |
 | Shop names, real-store colors, sign styles, materials | `src/materials.js → SHOP_PROFILE` |
 | HUD, menus, boss bar, power chips | `src/ui.js`, `index.template.html` |
+| Pause panel: difficulty and music volume | `ui.js → buildPause()/tickPause()`, `game.js → setPaused()/setSkill()` and `SKILLS` (Easy / Normal / Hard; Normal holds the game's own numbers), `audio.js → setMusicLevel()` |
 | Input (keyboard + touch) | `src/input.js` |
-| Audio (music, bark, SFX) | `src/audio.js` |
+| Audio (music, bark, SFX) | `src/audio.js`. The music's volume: the `<audio>` element's own `volume`, except on iPhone/iPad, which ignore it: there the music plays through Web Audio and a gain node sets its level |
 | Post-processing, particles | `src/fx.js` |
 
 ### Storefronts
@@ -75,7 +77,7 @@ On a touch screen the buttons sit in the bottom corners and the gesture tips sho
 - `build.mjs` inlines these as base64 via placeholder tokens (`__JESS_WAVE__`, `__BENCH_GRANDPA__`, etc.).
 
 ## Debug hooks (`?debug`)
-In the browser console, `window.peabodyDebug` has: `startGame()`, `goTo(x)`, `goToShop()`, `goToBoss()`, `goToJessica()`, `warp()`, `bossHP(n)`, `eat('hotdog'|'burrito')`, `setKickMode()`, `setFartMode()`, `setFly()`, `giveFish(n)`, `spawnChicken()`, `setInvincible()`, `tier(i)` (quality 0 ultra to 3 low), and `photo([camX,camY,camZ, lookX,lookY,lookZ, fov])` for close-up camera shots. Quality can also be forced with `?q=low` / `?q=ultra`.
+In the browser console, `window.peabodyDebug` has: `pause(on)`, `difficulty(i)` (0 Easy, 1 Normal, 2 Hard; returns the current one), `music(level)` (0..1; returns the music's state), `startGame()`, `goTo(x)`, `goToShop()`, `goToBoss()`, `goToJessica()`, `warp()`, `bossHP(n)`, `eat('hotdog'|'burrito')`, `setKickMode()`, `setFartMode()`, `setFly()`, `giveFish(n)`, `spawnChicken()`, `setInvincible()`, `tier(i)` (quality 0 ultra to 3 low), and `photo([camX,camY,camZ, lookX,lookY,lookZ, fov])` for close-up camera shots. Quality can also be forced with `?q=low` / `?q=ultra`.
 
 ## Testing notes
 - Test on real devices: iPad with keyboard, laptop Chrome/Safari, and Chrome on Android/iPhone (portrait and landscape).

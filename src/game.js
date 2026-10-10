@@ -4,7 +4,7 @@ import { WORLD, TREATS, TREAT_PICKS, generateLayout, generateCollectibles, gener
 import { makePeabody, makeCat, makePigeon, makeFox, makeRaccoon, makeChicken, makeMorty, makeJessica, makeWatermelon, makeMinnow, makeTrashCan, makeDogBed, makeCyclist, makeTurkey, makeBencher, makeFood } from './chars.js';
 import { input, clearJustPressed, keys, justPressed } from './input.js';
 const CHEAT = ['U', 'U', 'D', 'D', 'L', 'R', 'L', 'R']; // ↑ ↑ ↓ ↓ ← → ← → warps to the final quarter
-import { sfx, setMusic, restartMusic, setMusicRate } from './audio.js';
+import { sfx, setMusic, restartMusic, setMusicRate, setMusicPaused } from './audio.js';
 import { clamp, damp, lerp, rand, seed, srand, rnd } from './util.js';
 
 export const C = {
@@ -16,6 +16,19 @@ export const C = {
   POWER_EVERY: 5,
   FSK_T: 0.42, FSK_V: 9.5, PUPPY_T: 10, PUPPY_BONUS: 3.2, BOSS_HP: 10, BOSS_SCALE: 3.0,
 };
+
+// Difficulty, set on the pause panel's slider. Normal is the game as tuned: each of its numbers is the one the game has
+// always used. Easy and Hard change what a player feels: what a hit costs (hearts, stamina, the safe blink after it),
+// how fast cats and pigeons move, and the turkey (its health, how long it warns before a charge and how fast it comes,
+// how long it stays dizzy, how long it struts between attacks; the "mad" values once it is down to half health).
+export const SKILLS = [
+  { id: 'easy', name: 'Easy', hit: 0.5, invT: 2.0, staminaHit: 15, enemy: 0.75, bossHP: 7, idle: 2.0, idleMad: 1.5, windup: 1.6, windupMad: 1.25, charge: 7.5, chargeMad: 9, dizzy: 4.0, dizzyMad: 3.4,
+    about: 'Hits cost half a heart. Slower cats and pigeons. The turkey has 7 HP and warns longer.' },
+  { id: 'normal', name: 'Normal', hit: 1, invT: 1.5, staminaHit: 25, enemy: 1, bossHP: C.BOSS_HP, idle: 1.7, idleMad: 1.2, windup: 1.25, windupMad: 0.95, charge: 7.5, chargeMad: 9, dizzy: 3.2, dizzyMad: 2.6,
+    about: 'The game as it was made.' },
+  { id: 'hard', name: 'Hard', hit: 1, invT: 1.0, staminaHit: 35, enemy: 1.3, bossHP: 14, idle: 1.4, idleMad: 1.0, windup: 1.0, windupMad: 0.8, charge: 8.5, chargeMad: 10, dizzy: 2.6, dizzyMad: 2.1,
+    about: 'Faster cats and pigeons, a shorter blink after a hit. The turkey has 14 HP and charges sooner.' },
+];
 
 class Pool {
   constructor(scene, factory, n) {
@@ -34,6 +47,7 @@ export class Game {
     this.layout = env.layout;
     this.state = 'menu';
     this.t = 0;
+    this.paused = false; this.skill = 1; // difficulty: Normal until changed, for the visit
     this.shake = 0; this.hitStop = 0;
     this.cam = { x: 4, y: 0, look: 0, fov: 34 };
     // rigs
@@ -71,6 +85,7 @@ export class Game {
   }
 
   reset() {
+    if (this.paused) this.setPaused(false);
     seed(Date.now() & 0xffff);
     const p = this.p = {
       x: 3, y: 0, vx: 0, vy: 0, facing: 1, grounded: true, coyote: 0, jumpBuf: 0, landT: 0,
@@ -108,7 +123,7 @@ export class Game {
     this.benchers = this.benchRigs.map((rig, i) => ({ rig, x: WORLD.BENCH_X[i], given: false, food: rig.food, happyT: 0, tossNow: false }));
     this.foods = this.foodRigs.map((rig, i) => ({ rig, kind: this.benchRigs[i].food, active: false, landed: false, x: 0, y: 0, vx: 0, vy: 0, t: 0 }));
     for (const f of this.foods) f.rig.root.visible = false;
-    this.boss = { state: 'wait', x: WORLD.ARENA1 + 6, y: 0, vx: 0, vy: 0, facing: -1, hp: C.BOSS_HP, hpMax: C.BOSS_HP, t: 0, cycle: 0, invT: 0, hitT: 0, stompK: 0, done: false };
+    this.boss = { state: 'wait', x: WORLD.ARENA1 + 6, y: 0, vx: 0, vy: 0, facing: -1, hp: this.sk.bossHP, hpMax: this.sk.bossHP, t: 0, cycle: 0, invT: 0, hitT: 0, stompK: 0, done: false };
     this.boarRig.root.visible = false; this.boarRig.root.rotation.set(0, 0, 0);
     this.ui.bossBar?.(null);
     this.racs = this.racRigs.map((r, i) => ({ rig: r, x: 20 + i * 45 + srand(-6, 6), vx: 0, facing: 1, state: 'wander', t: rand(1, 3), target: null }));
@@ -120,7 +135,31 @@ export class Game {
     this.fx.clear?.();
   }
 
-  get difficulty() { return 1 + Math.floor(this.cam.x / 40) * 0.2; }
+  get difficulty() { return 1 + Math.floor(this.cam.x / 40) * 0.2; } // the level's own ramp, further along = faster
+  get sk() { return SKILLS[this.skill]; } // the difficulty setting
+
+  // ───────────────────────── pause + difficulty ─────────────────────────
+  // Pausing stops the game's clock (main.js stops calling update); the music plays on, quieter.
+  setPaused(on) {
+    on = !!on;
+    if (on === this.paused || (on && this.state !== 'playing')) return;
+    this.paused = on;
+    setMusicPaused(on);
+    this.ui.showPause?.(on);
+    sfx.ui();
+    clearJustPressed();
+  }
+  // Changing difficulty counts at once; mid-fight the turkey keeps the same share of its health.
+  setSkill(i) {
+    i = clamp(Math.round(i), 0, SKILLS.length - 1);
+    if (i === this.skill) return;
+    this.skill = i;
+    const b = this.boss, max = SKILLS[i].bossHP;
+    if (b.state === 'wait') { b.hp = b.hpMax = max; return; }
+    if (b.done || b.state === 'defeated' || b.state === 'gone') return;
+    b.hp = Math.max(1, Math.round((b.hp * max) / b.hpMax)); b.hpMax = max;
+    this.ui.bossBar?.(b.hp / b.hpMax, false);
+  }
   get fishAvail() { return this.p.fish - this.p.fishSpent; }
 
   startGame() {
@@ -580,7 +619,7 @@ export class Game {
     this.fx.burst(b.x, 1.2, 0.2, 0xffb070, 22); this.fx.ring(b.x, 1.1, 0.3, 0xffffff, 1.8, 0.3);
     sfx.hit(); this.hitStop = 0.06; this.shake = Math.max(this.shake, 0.25);
     if (b.state !== 'stunned' && b.state !== 'charge') b.x += Math.sign(b.x - p.x || 1) * 0.5;
-    this.ui.bossBar?.(b.hp / C.BOSS_HP, true);
+    this.ui.bossBar?.(b.hp / b.hpMax, true);
     if (b.hp <= 0) {
       b.state = 'defeated'; b.t = 0; b.vy = 5; b.vx = 3;
       sfx.win(); setTimeout(() => sfx.bark(), 300);
@@ -600,7 +639,7 @@ export class Game {
     }
     if (b.state === 'gone') return;
     b.t += dt; if (b.invT > 0) b.invT -= dt; if (b.hitT > 0) b.hitT -= dt;
-    const toP = Math.sign(p.x - b.x) || 1, enraged = b.hp <= C.BOSS_HP / 2;
+    const toP = Math.sign(p.x - b.x) || 1, enraged = b.hp <= b.hpMax / 2, sk = this.sk;
     switch (b.state) {
       case 'enter':
         b.vx = -6; if (Math.random() < dt * 10) this.fx.dust(b.x, 0, 0, 2, -1);
@@ -608,12 +647,12 @@ export class Game {
         break;
       case 'idle':
         b.facing = toP; b.vx = damp(b.vx, toP * (enraged ? 1.6 : 1.1), 4, dt);
-        if (b.t > (enraged ? 1.2 : 1.7)) { b.cycle++; b.t = 0; b.vx = 0; b.state = enraged && b.cycle % 3 === 0 ? 'stomp' : 'windup'; if (b.state === 'stomp') { b.vy = 9; b.stompK = 0; this.fx.text('FLAP!', b.x, 2.9, 0.3, '#ffd28a', 1); } }
+        if (b.t > (enraged ? sk.idleMad : sk.idle)) { b.cycle++; b.t = 0; b.vx = 0; b.state = enraged && b.cycle % 3 === 0 ? 'stomp' : 'windup'; if (b.state === 'stomp') { b.vy = 9; b.stompK = 0; this.fx.text('FLAP!', b.x, 2.9, 0.3, '#ffd28a', 1); } }
         break;
       case 'windup':
         b.vx = 0; b.facing = toP;
         if (Math.random() < dt * 16) this.fx.dust(b.x - b.facing * 0.8, 0, 0.2, 2, -b.facing);
-        if (b.t > (enraged ? 0.95 : 1.25)) { b.state = 'charge'; b.t = 0; b.vx = b.facing * (enraged ? 9 : 7.5); this.fx.text('CHARGE! JUMP!', b.x, 2.9, 0.3, '#ff5a3a', 1); sfx.whack(); }
+        if (b.t > (enraged ? sk.windupMad : sk.windup)) { b.state = 'charge'; b.t = 0; b.vx = b.facing * (enraged ? sk.chargeMad : sk.charge); this.fx.text('CHARGE! JUMP!', b.x, 2.9, 0.3, '#ff5a3a', 1); sfx.whack(); }
         break;
       case 'charge':
         if (Math.random() < dt * 20) this.fx.dust(b.x - b.facing * 0.9, 0, 0, 2, -b.facing);
@@ -624,7 +663,7 @@ export class Game {
         }
         break;
       case 'stunned':
-        b.vx = 0; if (b.t > (enraged ? 2.6 : 3.2)) { b.state = 'idle'; b.t = 0; }
+        b.vx = 0; if (b.t > (enraged ? sk.dizzyMad : sk.dizzy)) { b.state = 'idle'; b.t = 0; }
         break;
       case 'stomp': {
         b.vx = 0; b.vy -= 24 * dt; b.y += b.vy * dt; b.stompK = Math.min(1, b.t / 0.75);
@@ -652,7 +691,7 @@ export class Game {
       else if (b.state === 'charge') { this.hurt(b.x); p.vx = toP * 7; }
       else if (b.state !== 'stunned' && p.invT <= 0) { p.vx = toP * 5; if (p.grounded) { p.vy = 4; p.grounded = false; } }
     }
-    if (b.hitT <= 0) this.ui.bossBar?.(b.done ? null : b.hp / C.BOSS_HP, false);
+    if (b.hitT <= 0) this.ui.bossBar?.(b.done ? null : b.hp / b.hpMax, false);
   }
 
   killEnemy(e, pts, label) {
@@ -706,11 +745,12 @@ export class Game {
       this.popText('SHIELD!', '#ffd34d', 1.3); this.fx.ring(p.x, p.y + 0.55, 0, 0xffd34d, 1.8, 0.35); this.fx.sparkle(p.x, p.y + 0.6, 0, 0xffe36b, 20, 3);
       return;
     }
-    p.lives--; p.invT = 1.5; this.shake = 0.35; this.hitStop = 0.08;
+    const sk = this.sk;
+    p.lives -= sk.hit; p.invT = sk.invT; this.shake = 0.35; this.hitStop = 0.08;
     p.vy = 6; p.vx = -Math.sign(fromX - p.x || p.facing) * 4; p.grounded = false; p.onPlat = null; p.napping = false;
     sfx.hit();
     this.fx.sparkle(p.x, p.y + 0.5, 0, 0xff5252, 16, 4);
-    p.stamina = Math.max(0, p.stamina - 25);
+    p.stamina = Math.max(0, p.stamina - sk.staminaHit);
     if (p.stamina <= 0) {
       if (p.jumpLvl > 0) { p.jumpLvl--; this.popText('JUMP -1', '#ff5252', 1); }
       else if (p.speedLvl > 0) { p.speedLvl--; this.popText('SPEED -1', '#ff5252', 1); }
@@ -730,7 +770,7 @@ export class Game {
   }
 
   updateEnemies(dt) {
-    const p = this.p, diff = this.difficulty;
+    const p = this.p, diff = this.difficulty, pace = this.sk.enemy;
     const near = this.cam.x;
     for (const e of this.enemies) {
       if (!e.alive) {
@@ -740,14 +780,14 @@ export class Game {
       if (Math.abs(e.x - near) > 26) continue; // sleep far away
       if (e.frozenT > 0) { e.frozenT -= dt; }
       else if (e.type === 'cat') {
-        e.x += e.dir * 1.08 * diff * dt;
+        e.x += e.dir * 1.08 * diff * pace * dt;
         if (Math.abs(e.x - e.baseX) > e.range) { e.dir = Math.sign(e.baseX - e.x); }
         // pee puddles freeze cats
         if (e.y < 0.1) for (const pd of this.puddles) if (Math.abs(pd.x - e.x) < 0.6) {
           e.frozenT = 5; sfx.freeze(); this.addScore(150, e.x, 1.2, '#bfeaff', 'FROZEN'); this.fx.sparkle(e.x, 0.5, 0, 0xbfeaff, 16); break;
         }
       } else {
-        e.x += e.dir * 1.44 * diff * dt;
+        e.x += e.dir * 1.44 * diff * pace * dt;
         if (Math.abs(e.x - e.baseX) > e.range) e.dir = Math.sign(e.baseX - e.x);
         e.y = e.baseY + Math.sin(this.t * 2 + e.ph) * 0.3;
       }
@@ -1155,7 +1195,7 @@ export class Game {
   renderToText() {
     const p = this.p;
     return JSON.stringify({
-      state: this.state, x: +p.x.toFixed(2), y: +p.y.toFixed(2), vx: +p.vx.toFixed(2), vy: +p.vy.toFixed(2), grounded: p.grounded,
+      state: this.state, paused: this.paused, difficulty: this.sk.id, x: +p.x.toFixed(2), y: +p.y.toFixed(2), vx: +p.vx.toFixed(2), vy: +p.vy.toFixed(2), grounded: p.grounded,
       score: p.score, lives: p.lives, stamina: Math.round(p.stamina), combo: p.combo,
       melons: p.melons, fish: p.fish, fishAvail: this.fishAvail, catKills: p.catKills, pigeonKills: p.pigeonKills,
       powers: { kick: +p.kickT.toFixed(1), fart: +p.fartT.toFixed(1), bark: +p.barkT.toFixed(1), shake: +p.shakeT.toFixed(1), fly: +p.flyT.toFixed(1), morty: +p.mortyT.toFixed(1), pee: p.hasPee, jumpLvl: p.jumpLvl, speedLvl: p.speedLvl, sizeLvl: p.sizeLvl },
