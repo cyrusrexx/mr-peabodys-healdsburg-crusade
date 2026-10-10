@@ -58,6 +58,7 @@ On a touch screen the buttons sit in the bottom corners and the gesture tips sho
 | Bench locals who share food (hot dog = PUPPY RUN, burrito = mega fart) | `chars.js → makeBencher()/makeFood()`, `game.js → eatFood()/megaFart()` |
 | Boss: Tom the Giant Wild Turkey (10 HP; only its charge and landing quake hurt; it gets dizzy after hitting an arena wall, and dizzy hits do double damage) | `chars.js → makeTurkey()`, `game.js` boss state machine (`C.BOSS_HP`, `C.BOSS_SCALE`); arena in `world.js` (BOSS_TRIG 447, ARENA 445–466). The older boar model `makeBoar()` is kept for rollback |
 | Characters (Peabody, Morty, Jessica cutout, cats, gray fox, pigeons) | `src/chars.js`, `src/sculpt.js` |
+| Grey foxes climbing: up a fence or a flat-roofed shop front, along the top, then down or a pounce on a pigeon | `game.js → updateFox()` and `climbables()`; poses in `chars.js → makeFox()`; fences in `world.js → WORLD.FENCES`, built by `env.js → buildFences()` |
 | Cat coats (14 variants) | `chars.js → CAT_VARIANTS` |
 | The possum, Peabody's friend (once per game, at `WORLD.POSSUM_X`: it hisses, he tosses it a minnow from his mouth, or a biscuit, and it eats in hearts) | `chars.js → makePossum()/makeGift()`, `game.js → updatePossum()/tossGift()`, `audio.js → sfx.possumHiss()/possumNom()` |
 | Level layout, buildings, platforms, enemy spawns | `src/world.js` |

@@ -118,7 +118,7 @@ export class Game {
     this.jess = { reached: false, open: false, waving: true, jump: false, faceCam: false };
     this.win = { t: 0, phase: 0 };
     // foxes / raccoons / trash
-    this.foxes = this.foxRigs.map((r, i) => ({ rig: r, x: 30 + i * 55 + srand(-6, 6), vx: 0, facing: 1, state: 'idle', t: rand(1, 3), target: null }));
+    this.foxes = this.foxRigs.map((r, i) => ({ rig: r, x: 30 + i * 55 + srand(-6, 6), y: 0, z: -0.9, vx: 0, vy: 0, facing: 1, state: 'idle', t: rand(1, 3), target: null, pose: 'walk', climb: null, goal: 0, goalZ: -0.9, walked: false }));
     this.cans = this.canRigs.map((r, i) => {
       let x = 12 + i * 18.5 + srand(-3, 3);
       for (const bx of WORLD.BENCH_X) if (Math.abs(bx - x) < 2.2) x = bx + (x < bx ? -2.4 : 2.4);
@@ -903,30 +903,12 @@ export class Game {
 
   updateWorldCritters(dt, idle = false) {
     const camX = this.cam.x;
-    // foxes chase pigeons
+    // foxes chase pigeons, and climb
     for (const f of this.foxes) {
       if (Math.abs(f.x - camX) > 30) { f.rig.root.visible = false; continue; }
       f.rig.root.visible = true;
-      f.t -= dt;
-      if (f.state !== 'chase') {
-        const prey = this.enemies.find((e) => e.alive && e.type === 'pigeon' && Math.abs(e.x - f.x) < 8 && e.y < 4.2);
-        if (prey && !idle) { f.state = 'chase'; f.target = prey; }
-        else if (f.t <= 0) { f.state = Math.random() < 0.5 ? 'idle' : 'trot'; f.t = rand(1.5, 3.5); f.facing = Math.random() < 0.5 ? -1 : 1; }
-        f.vx = f.state === 'trot' ? f.facing * 1.2 : damp(f.vx, 0, 6, dt);
-      } else {
-        const tg = f.target;
-        if (!tg || !tg.alive) { f.state = 'idle'; f.t = 1; f.target = null; }
-        else {
-          f.facing = Math.sign(tg.x - f.x) || 1; f.vx = f.facing * 2.8;
-          if (Math.abs(tg.x - f.x) < 0.5) { // pounce
-            tg.alive = false; tg.dyingT = 0.8; tg.vx = f.facing * 2; tg.vy = 3; tg.spinDir = 1;
-            this.fx.sparkle(tg.x, tg.y, 0, 0xdfe8ff, 10); f.state = 'idle'; f.t = 2; f.target = null;
-            if (Math.abs(tg.x - this.p.x) < 12) this.fx.text('FOX GOT ONE!', tg.x, tg.y + 0.6, 0.3, '#ff9a5a', 0.8);
-          }
-        }
-      }
-      f.x += f.vx * dt;
-      f.rig.root.position.set(f.x, 0, -0.9);
+      this.updateFox(f, dt, idle);
+      f.rig.root.position.set(f.x, f.y, f.z);
       f.rig.update(dt, f);
     }
     // raccoons + trash
@@ -965,6 +947,145 @@ export class Game {
         if (c.food) { c.rig.food.position.set(c.foodX - c.x, 0.15 + Math.sin(this.t * 4) * 0.05, 1.25); c.rig.food.rotation.y += dt * 2; if (Math.random() < dt * 4) this.fx.sparkle(c.foodX, 0.35, 0, 0xffd28a, 1, 1); }
       }
     }
+  }
+
+  // ───────────────────────── grey foxes ─────────────────────────
+  // Healdsburg's grey foxes climb, as they really do: a fox trots to the foot of a fence or a shop front, runs up it,
+  // over the edge, along the top or the roof's edge, stops to look about, then comes down again (a hop off a fence,
+  // head first down a wall), or pounces from up there on a pigeon below. On the ground they chase pigeons as before,
+  // and the pounce is a leap you can see. Foxes never touch Peabody, and leave the birds right by him to him.
+  climbables() {
+    if (this._climbs) return this._climbs;
+    const F = WORLD.FRONT_Z, out = [];
+    for (const f of WORLD.FENCES) out.push({ kind: 'fence', x0: f.x0 + 0.3, x1: f.x1 - 0.3, top: f.top, topZ: f.z, wallZ: f.z + 0.2 });
+    // flat-roofed shop fronts up to two storeys (taller ones run out of view), out of the turkey's arena; climbed at an end
+    // clear of its awning and balcony, and walked along the cornice
+    for (const b of this.layout.buildings) {
+      if (b.roof !== 'flat' || b.iggy || b.H > 6.7 || b.x0 + b.w > 440) continue;
+      const clear = (x) => !(b.awning && x > b.awning.x0 - 0.4 && x < b.awning.x0 + b.awning.w + 0.4) && !(b.balcony && x > b.balcony.x0 - 0.35 && x < b.balcony.x0 + b.balcony.w + 0.35);
+      const spots = [b.x0 + 0.45, b.x0 + b.w - 0.45].filter(clear);
+      if (spots.length) out.push({ kind: 'wall', x0: b.x0 + 0.3, x1: b.x0 + b.w - 0.3, top: b.H + 0.04, topZ: F + 0.1, wallZ: F + 0.26, spots });
+    }
+    return (this._climbs = out);
+  }
+  foxClimbFor(f) {
+    let best = null, bd = 7;
+    for (const c of this.climbables()) {
+      const cx = c.spots ? c.spots.reduce((a, s) => (Math.abs(s - f.x) < Math.abs(a - f.x) ? s : a)) : clamp(f.x + f.facing * 0.8, c.x0, c.x1);
+      if (Math.abs(cx - f.x) < bd) { bd = Math.abs(cx - f.x); best = { c, cx }; }
+    }
+    return best;
+  }
+  // a pigeon in reach of a pounce from where the fox is (not one right by Peabody: that one is his)
+  foxPrey(f, reach, below, above) {
+    const p = this.p;
+    return this.enemies.find((e) => e.alive && e.type === 'pigeon' && Math.abs(e.x - f.x) < reach && e.y < f.y + above && e.y > f.y - below && Math.abs(e.x - p.x) > 1.4);
+  }
+  foxLeap(f, tg) { // a ballistic arc to where the bird is now
+    const T = clamp(Math.hypot(tg.x - f.x, tg.y - f.y) / 6.5, 0.3, 0.6);
+    f.facing = Math.sign(tg.x - f.x) || f.facing;
+    f.vx = (tg.x - f.x) / T; f.vy = (tg.y - 0.4 - f.y + 10 * T * T) / T;
+    f.goalZ = 0; f.target = tg; f.state = 'leap'; f.pose = 'leap';
+  }
+  foxDown(f) { // done up there: a hop down off a fence; to a climbing spot and head first down a wall
+    const c = f.climb;
+    if (c.kind === 'fence') { f.state = 'leap'; f.pose = 'leap'; f.target = null; f.vx = f.facing * 1.4; f.vy = 3.2; f.goalZ = -0.9; return; }
+    f.goal = c.spots.reduce((a, s) => (Math.abs(s - f.x) < Math.abs(a - f.x) ? s : a)); f.state = 'toEdge';
+  }
+  updateFox(f, dt, idle) {
+    f.t -= dt;
+    const c = f.climb;
+    switch (f.state) {
+      case 'idle': case 'trot': {
+        f.pose = 'walk'; f.y = 0;
+        const prey = idle ? null : this.enemies.find((e) => e.alive && e.type === 'pigeon' && Math.abs(e.x - f.x) < 8 && e.y < 4.2);
+        if (prey) { f.state = 'chase'; f.target = prey; break; }
+        if (f.t <= 0) {
+          const pick = Math.random() < 0.45 ? this.foxClimbFor(f) : null;
+          if (pick) { f.climb = { ...pick.c, cx: pick.cx }; f.state = 'toClimb'; f.walked = false; }
+          else { f.state = Math.random() < 0.5 ? 'idle' : 'trot'; f.t = rand(1.5, 3.5); f.facing = Math.random() < 0.5 ? -1 : 1; }
+        }
+        f.vx = f.state === 'trot' ? f.facing * 1.2 : damp(f.vx, 0, 6, dt);
+        f.z = damp(f.z, -0.9, 4, dt);
+        break;
+      }
+      case 'chase': {
+        const tg = f.target; f.pose = 'walk';
+        if (!tg || !tg.alive) { f.state = 'idle'; f.t = 1; f.target = null; break; }
+        f.facing = Math.sign(tg.x - f.x) || 1; f.vx = f.facing * 2.8;
+        f.z = damp(f.z, -0.9, 4, dt);
+        if (Math.abs(tg.x - f.x) < 0.5 && Math.abs(tg.x - this.p.x) > 1.4) this.foxLeap(f, tg); // pounce
+        break;
+      }
+      case 'toClimb': { // to the foot of the fence or wall
+        f.pose = 'walk'; f.y = 0;
+        const dx = c.cx - f.x;
+        f.facing = Math.sign(dx) || f.facing;
+        f.vx = Math.abs(dx) < 0.04 ? 0 : f.facing * Math.min(2.2, Math.abs(dx) * 6 + 0.3);
+        f.z = damp(f.z, c.wallZ, 6, dt);
+        if (Math.abs(dx) < 0.06 && Math.abs(f.z - c.wallZ) < 0.05) { f.x = c.cx; f.vx = 0; f.z = c.wallZ; f.state = 'up'; }
+        break;
+      }
+      case 'up': // up the face
+        f.pose = 'up'; f.vx = 0; f.z = c.wallZ;
+        f.y += (c.kind === 'fence' ? 2.0 : 2.7) * dt;
+        if (f.y >= c.top - 0.3) { f.state = 'over'; f.t = 0.3; }
+        break;
+      case 'over': // over the edge, onto the top
+        f.pose = 'walk'; f.vx = 0;
+        f.y = damp(f.y, c.top, 16, dt); f.z = damp(f.z, c.topZ, 16, dt);
+        if (f.t <= 0) { f.y = c.top; f.z = c.topZ; f.state = 'top'; f.goal = this.foxGoal(f); }
+        break;
+      case 'top': { // along the top, watching for a bird to pounce on
+        f.pose = 'walk'; f.y = c.top; f.z = c.topZ;
+        const prey = idle ? null : this.foxPrey(f, 3.4, 4, c.kind === 'fence' ? 2.6 : 1.2);
+        if (prey) { this.foxLeap(f, prey); break; }
+        const dx = f.goal - f.x;
+        f.facing = Math.sign(dx) || f.facing; f.vx = Math.abs(dx) < 0.08 ? 0 : f.facing * 1.5;
+        if (Math.abs(dx) < 0.08) { f.state = 'look'; f.t = rand(0.8, 1.8); }
+        break;
+      }
+      case 'look': { // stopped, looking about
+        f.pose = 'look'; f.vx = 0;
+        const prey = idle ? null : this.foxPrey(f, 3.4, 4, c.kind === 'fence' ? 2.6 : 1.2);
+        if (prey) { this.foxLeap(f, prey); break; }
+        if (f.t <= 0) { if (!f.walked && Math.random() < 0.4) { f.walked = true; f.state = 'top'; f.goal = this.foxGoal(f); } else this.foxDown(f); }
+        break;
+      }
+      case 'toEdge': { // to a climbing spot, to go down
+        f.pose = 'walk';
+        const dx = f.goal - f.x;
+        f.facing = Math.sign(dx) || f.facing; f.vx = Math.abs(dx) < 0.06 ? 0 : f.facing * Math.min(1.5, Math.abs(dx) * 6 + 0.3);
+        if (Math.abs(dx) < 0.06) { f.x = f.goal; f.vx = 0; f.state = 'down'; f.t = 0.3; }
+        break;
+      }
+      case 'down': // head first down the face (over the edge first)
+        f.pose = 'down'; f.vx = 0;
+        f.z = damp(f.z, c.wallZ, 16, dt);
+        if (f.t <= 0) f.y -= 2.4 * dt;
+        if (f.y <= 0.3) { f.y = 0; f.pose = 'walk'; f.state = 'idle'; f.t = rand(1, 2); f.climb = null; }
+        break;
+      case 'leap': { // in the air: a pounce, or a hop down
+        f.pose = 'leap';
+        f.vy -= 20 * dt; f.y += f.vy * dt;
+        f.z = damp(f.z, f.goalZ, 6, dt);
+        const tg = f.target;
+        if (tg && tg.alive && Math.abs(tg.x - f.x) < 0.65 && Math.abs(tg.y - (f.y + 0.4)) < 0.8) {
+          tg.alive = false; tg.dyingT = 0.8; tg.vx = f.facing * 2; tg.vy = 3; tg.spinDir = 1;
+          this.fx.sparkle(tg.x, tg.y, 0, 0xdfe8ff, 10); f.target = null; f.vx *= 0.5;
+          if (Math.abs(tg.x - this.p.x) < 12) this.fx.text('FOX GOT ONE!', tg.x, tg.y + 0.6, 0.3, '#ff9a5a', 0.8);
+        }
+        if (f.y <= 0 && f.vy < 0) { f.y = 0; f.vy = 0; f.vx = 0; f.pose = 'walk'; f.state = 'idle'; f.t = rand(1, 2); f.target = null; f.climb = null; this.fx.dust(f.x, 0, f.z, 4); }
+        break;
+      }
+    }
+    f.x += f.vx * dt;
+  }
+  foxGoal(f) { // somewhere else along the top
+    const c = f.climb, d = (Math.random() < 0.5 ? -1 : 1) * rand(1.2, 3.4);
+    let g = clamp(f.x + d, c.x0, c.x1);
+    if (Math.abs(g - f.x) < 0.8) g = clamp(f.x - d, c.x0, c.x1);
+    return g;
   }
 
   updateMorty(dt) {

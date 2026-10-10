@@ -818,10 +818,19 @@ export function makePigeon() {
 }
 
 // ───────────────────────── FOX ─────────────────────────
+// A grey fox's tilt on a wall or fence: its head (+x) up or down the face, its back (+y) to the camera. A fox facing right
+// (yaw ≈ 0) going up, or facing left going down, takes A; the other two take B.
+const _basisQ = (h, b) => { const H = new THREE.Vector3(...h), Bk = new THREE.Vector3(...b); return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(H, Bk, new THREE.Vector3().crossVectors(H, Bk))); };
+// rolled a little about its spine, so on a face it shows its flank and face to the camera, not only its back
+const _roll = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -0.55);
+const FOX_TILT_A = _basisQ([0, 1, 0], [0, 0, 1]).multiply(_roll), FOX_TILT_B = _basisQ([0, -1, 0], [0, 0, 1]).multiply(_roll);
+// f.pose: 'walk' (the default), 'up' / 'down' (climbing a face), 'leap' (in the air, pitched along its flight), 'look'
+// (stopped up high, looking about)
 export function makeFox() {
   critterMats();
   const root = new THREE.Group();
-  const yaw = group(root); const body = group(yaw, [0, 0.38, 0]);
+  const tilt = group(root); // turns the fox upright on a wall, or pitches it in a leap
+  const yaw = group(tilt); const body = group(yaw, [0, 0.38, 0]);
   const head = group(body, [0.28, 0.13, 0]);
   const tail = group(body, [-0.27, 0.03, 0], [0, 0, 0.45]);
   const legs = [];
@@ -869,16 +878,25 @@ export function makeFox() {
   eye(head, [0.064, 0.03, 0.056], 0.022, 0xb07a1c); eye(head, [0.064, 0.03, -0.056], 0.022, 0xb07a1c);
   for (const s of [1, -1]) { add(head, G.cone, M.foxEar, [-0.02, 0.12, 0.058 * s], [0.05, 0.12, 0.024], [0.25 * s, 0, 0.1]); add(head, G.cone, M.foxRust, [-0.03, 0.115, 0.061 * s], [0.046, 0.06, 0.02], [0.25 * s, 0, 0.1]); add(head, G.cone, M.catWhite, [-0.012, 0.12, 0.064 * s], [0.03, 0.085, 0.01], [0.25 * s, 0, 0.1]); }
   const shadow = blobShadow(0.9); root.add(shadow);
-  const st = { yaw: 0, ph: 0, t: Math.random() * 10 };
+  const st = { yaw: 0, ph: 0, t: Math.random() * 10, q: new THREE.Quaternion() };
+  const qT = new THREE.Quaternion(), eul = new THREE.Euler();
   function update(dt, f) {
     st.t += dt;
     st.yaw = damp(st.yaw, faceAngle(f.facing), 7, dt); yaw.rotation.y = st.yaw;
-    const sp = Math.abs(f.vx);
-    st.ph += dt * (2 + sp * 5);
-    const s = Math.sin(st.ph) * Math.min(1, sp / 1.5) * 0.7;
-    legs[0].rotation.z = s; legs[3].rotation.z = s; legs[1].rotation.z = -s; legs[2].rotation.z = -s;
-    tail.rotation.x = Math.sin(st.t * 4) * 0.2; tail.rotation.z = 0.45 + Math.sin(st.t * 2) * 0.1;
-    head.rotation.z = sp < 0.2 ? Math.sin(st.t * 1.2) * 0.1 : -0.05;
+    const pose = f.pose || 'walk', climbing = pose === 'up' || pose === 'down';
+    if (climbing) qT.copy((pose === 'up') === (f.facing > 0) ? FOX_TILT_A : FOX_TILT_B);
+    else if (pose === 'leap') qT.setFromEuler(eul.set(0, 0, f.facing * Math.atan2(f.vy || 0, Math.max(1.5, Math.abs(f.vx))) * 0.8));
+    else qT.identity();
+    st.q.slerp(qT, 1 - Math.exp(-14 * dt)); tilt.quaternion.copy(st.q);
+    const sp = climbing ? 2.2 : Math.abs(f.vx);
+    st.ph += dt * (2 + sp * (climbing ? 6 : 5));
+    const s = Math.sin(st.ph) * Math.min(1, sp / 1.5) * (climbing ? 0.95 : 0.7);
+    if (pose === 'leap') { legs[0].rotation.z = legs[1].rotation.z = 0.9; legs[2].rotation.z = legs[3].rotation.z = -0.8; }
+    else { legs[0].rotation.z = s; legs[3].rotation.z = s; legs[1].rotation.z = -s; legs[2].rotation.z = -s; }
+    tail.rotation.x = Math.sin(st.t * 4) * 0.2; tail.rotation.z = (climbing ? 0.15 : 0.45) + Math.sin(st.t * 2) * 0.1;
+    head.rotation.z = pose === 'look' ? 0.12 + Math.sin(st.t * 1.1) * 0.08 : sp < 0.2 ? Math.sin(st.t * 1.2) * 0.1 : -0.05;
+    head.rotation.y = pose === 'look' ? Math.sin(st.t * 1.4) * 0.65 : damp(head.rotation.y, 0, 8, dt);
+    shadow.visible = !(f.y > 0.08);
   }
   return { root, update };
 }

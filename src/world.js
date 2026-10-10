@@ -13,6 +13,14 @@ export const WORLD = {
   TOWN_BENCH_X: [30, 112, 136, 196, 266, 290, 375, 411],
   // the possum Peabody befriends, on the sidewalk a little before Fideaux Pets (no trash can, lamp or bench stands there)
   POSSUM_X: 221.5, POSSUM_Z: -1.05,
+  // fences the grey foxes climb and run along (scenery only: Peabody can't stand on them): capped picket fences either
+  // side of the plaza's gazebo, between its benches, and a rail fence on the vineyard's stone wall. top: the height
+  // a fox walks at; z: the fence's line
+  FENCES: [
+    { x0: 63.8, x1: 71.2, z: -2.05, top: 1.15, kind: 'picket' },
+    { x0: 85.8, x1: 93.2, z: -2.05, top: 1.15, kind: 'picket' },
+    { x0: 300.5, x1: 333.5, z: -2.6, top: 1.45, kind: 'rail' },
+  ],
 };
 export const ZONES = [
   { type: 'plaza', x0: 56, x1: 98 },

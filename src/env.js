@@ -64,6 +64,7 @@ export class Env {
     this.buildGround();
     this.buildTown();
     this.buildZones();
+    this.buildFences();
   }
 
   buildSky() {
@@ -630,6 +631,28 @@ export class Env {
     crowns.count = ci; crowns.castShadow = false; crowns.receiveShadow = false;
     this.root.add(crowns);
     this.hills = [];
+  }
+
+  // ───────────── fences (the foxes climb them) ─────────────
+  // Built from fixed numbers, after everything else, so the town's seeded layout is unchanged.
+  buildFences() {
+    const gb = new GB();
+    for (const f of WORLD.FENCES) {
+      const L = f.x1 - f.x0, cx = (f.x0 + f.x1) / 2;
+      if (f.kind === 'picket') {
+        const col = '#f3eee2', n = Math.max(1, Math.round(L / 1.6));
+        for (let i = 0; i <= n; i++) gb.box(0.1, f.top + 0.06, 0.1, f.x0 + (i / n) * L, (f.top + 0.06) / 2, f.z, col); // posts
+        for (const y of [0.3, f.top - 0.28]) gb.box(L, 0.07, 0.05, cx, y, f.z - 0.05, col); // rails behind the pickets
+        for (let x = f.x0 + 0.13; x < f.x1 - 0.06; x += 0.17) gb.box(0.075, f.top - 0.1, 0.03, x, (f.top - 0.1) / 2 + 0.04, f.z + 0.035, col); // pickets
+        gb.box(L + 0.12, 0.05, 0.16, cx, f.top - 0.025, f.z, col); // cap rail, the foxes' path
+      } else {
+        const n = Math.max(1, Math.round(L / 1.8));
+        for (let i = 0; i <= n; i++) gb.box(0.12, f.top - 0.3, 0.12, f.x0 + (i / n) * L, 0.3 + (f.top - 0.3) / 2, f.z, '#76573a'); // posts, set in the wall
+        gb.box(L, 0.09, 0.08, cx, f.top - 0.45, f.z + 0.04, '#8b6a49');
+        gb.box(L, 0.1, 0.13, cx, f.top - 0.05, f.z, '#8b6a49'); // top rail, the foxes' path
+      }
+    }
+    const m = gb.mesh(mats.static); if (m) this.root.add(m);
   }
 
   gazebo(st, fol, glow, x, z) {
