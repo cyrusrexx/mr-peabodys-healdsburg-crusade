@@ -96,7 +96,7 @@ export class Game {
       combo: 0, comboT: 0, score: 0, onPlat: null, barkAnim: 0, wasUp: false,
       rollT: 0, rollDir: 1, rollCd: 0, trickT: 0, trickCd: 0, tootCd: 0, tootAnim: 0, taps: [],
       skyT: 0, dblT: 0, dblUsed: false, zoomT: 0, magT: 0, shield: false, treats: [], airHop: false,
-      fskT: 0, fskV: 0, fskBoss: false, atkVar: 0, lastKick: -1, puppyT: 0,
+      fskT: 0, fskV: 0, fskBoss: false, atkVar: 0, lastKick: -1, puppyT: 0, safeT: 0,
     };
     this.time = 0;
     // entities
@@ -212,7 +212,7 @@ export class Game {
       if (this.cheatSeq.map((c) => c.k).join('') === CHEAT.join('')) { this.cheatSeq = []; this.cheatWarp(); return; }
     }
     // timers
-    for (const k of ['invT', 'kickT', 'fartT', 'barkT', 'shakeT', 'flyT', 'mortyT', 'attackCd', 'landT', 'barkAnim', 'peeT', 'rollT', 'rollCd', 'trickT', 'trickCd', 'tootCd', 'tootAnim', 'skyT', 'dblT', 'zoomT', 'magT', 'fskT', 'puppyT']) {
+    for (const k of ['invT', 'kickT', 'fartT', 'barkT', 'shakeT', 'flyT', 'mortyT', 'attackCd', 'landT', 'barkAnim', 'peeT', 'rollT', 'rollCd', 'trickT', 'trickCd', 'tootCd', 'tootAnim', 'skyT', 'dblT', 'zoomT', 'magT', 'fskT', 'puppyT', 'safeT']) {
       if (p[k] > 0) {
         const before = p[k];
         p[k] = Math.max(0, p[k] - dt);
@@ -739,7 +739,7 @@ export class Game {
 
   hurt(fromX) {
     const p = this.p;
-    if (p.invT > 0 || p.fartT > 0 || p.mortyT > 0 || p.rollT > 0 || this.state !== 'playing') return;
+    if (p.invT > 0 || p.safeT > 0 || p.fartT > 0 || p.mortyT > 0 || p.rollT > 0 || this.state !== 'playing') return;
     if (p.shield) {
       p.shield = false; p.invT = 1.2; sfx.whack(); this.shake = 0.15;
       this.popText('SHIELD!', '#ffd34d', 1.3); this.fx.ring(p.x, p.y + 0.55, 0, 0xffd34d, 1.8, 0.35); this.fx.sparkle(p.x, p.y + 0.6, 0, 0xffe36b, 20, 3);
@@ -1004,6 +1004,7 @@ export class Game {
   }
 
   // ───────────────────────── cyclists (2 pass-bys) ─────────────────────────
+  // A cyclist never hurts Peabody: it rides past on the street, in front of him, and nothing here touches his hearts.
   updateBikes(dt) {
     const p = this.p;
     for (const b of this.bikes) {
@@ -1027,7 +1028,7 @@ export class Game {
   }
   bikeFart(b) {
     const p = this.p, bx = p.x - p.facing * 0.45;
-    sfx.bigFart(); p.tootAnim = 0.9; this.shake = Math.max(this.shake, 0.25);
+    sfx.bigFart(); p.tootAnim = 0.9; this.shake = Math.max(this.shake, 0.12);
     for (let i = 0; i < 34; i++) {
       const k = Math.random();
       this.fx.smoke(bx - p.facing * k * 1.2, p.y + 0.3 + Math.random() * 0.6, k * 2.6, 0x9bd04a, 1, 1.1 + Math.random() * 0.8);
@@ -1036,7 +1037,8 @@ export class Game {
     this.popText('PFFFFT!', '#a6e05a', 1.5, 2.15);
     this.addScore(250, b.x, 2.4, '#a6e05a', 'BIKE BLAST!');
     b.stinkT = 1.8; b.vx = 15;
-    p.invT = Math.max(p.invT, 0.8);
+    // safe for as long as it lasts, as before, but without the blink that follows a hit, so it never looks like one
+    p.safeT = Math.max(p.safeT, 0.8);
     for (const e of this.enemies) if (e.alive && Math.abs(e.x - p.x) < 2.6 && Math.abs(e.y - p.y) < 2) this.killEnemy(e, 60, 'PFFT!');
   }
 

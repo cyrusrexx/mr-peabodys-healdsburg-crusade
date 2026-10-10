@@ -82,3 +82,4 @@ In the browser console, `window.peabodyDebug` has: `pause(on)`, `difficulty(i)` 
 ## Testing notes
 - Test on real devices: iPad with keyboard, laptop Chrome/Safari, and Chrome on Android/iPhone (portrait and landscape).
 - Expected harmless console warnings: `toNonIndexed(): already non-indexed` and a KHR texture warning.
+- Loading makes everything that starts hidden (pooled critters, the cyclists, Morty, the turkey…) ready before play: its shaders compiled for the render target the scene is drawn into, its buffers uploaded and its shadow shaders built, so nothing stalls the first time it comes into view. Each cyclist's bike is baked into a few skinned meshes, one per material (`chars.js → makeCyclist()`).

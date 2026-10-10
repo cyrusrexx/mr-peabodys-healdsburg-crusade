@@ -134,10 +134,22 @@ async function boot() {
   onResize();
 
   progress(0.75, 'Compiling shaders…'); await frame();
-  // make pooled objects visible for compile, then restore
-  const hidden = [];
+  // Everything hidden for now (pooled cats and birds, the cyclists, Morty, the turkey…) is made ready before play. Its
+  // shaders are compiled for the render target the scene is drawn into: there, unlike on the canvas, there is no tone
+  // mapping (the output pass does it), so the programs differ, and compiling for the canvas left the real ones to be
+  // built the first time each thing came into view. Then it is all drawn once, behind the loading screen, with culling
+  // off, so its buffers are uploaded and its shadow shaders built too. (A cyclist riding in used to stall the game.)
+  const hidden = [], unculled = [];
   scene.traverse((o) => { if (!o.visible) { hidden.push(o); o.visible = true; } });
-  try { if (renderer.compileAsync) await renderer.compileAsync(scene, camera); else renderer.compile(scene, camera); } catch (e) {}
+  for (const h of hidden) h.traverse((o) => { if (o.frustumCulled) { unculled.push(o); o.frustumCulled = false; } });
+  let compiling = null;
+  renderer.setRenderTarget(composer.readBuffer);
+  try { compiling = renderer.compileAsync ? renderer.compileAsync(scene, camera) : renderer.compile(scene, camera); } catch (e) {}
+  renderer.setRenderTarget(null);
+  try { await compiling; } catch (e) {}
+  progress(0.88, 'Setting the scene…'); await frame();
+  try { composer.render(); } catch (e) {}
+  for (const o of unculled) o.frustumCulled = true;
   for (const o of hidden) o.visible = false;
   progress(0.95, 'Almost there…'); await frame();
 

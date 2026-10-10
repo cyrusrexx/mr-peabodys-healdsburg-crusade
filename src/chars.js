@@ -947,6 +947,9 @@ export function makeRaccoon() {
 
 // ───────────────────────── CYCLIST ─────────────────────────
 // Road cyclist on a bike, side-on along +x. Sculpted rider; legs solve 2-bone IK onto the pedals.
+// The bike's parts (tubes, wheels and spokes, cranks, bars, helmet…) are baked into one skinned mesh per material, each
+// part bound to the group that moves it (a wheel, the cranks, the head), so a cyclist costs six draw calls, not 69, and
+// only the frame, tyres, bars and helmet cast shadows. The two riders share one sculpted body, coloured each their own.
 export function makeCyclist(variant = 0) {
   critterMats();
   const V = [
@@ -1060,7 +1063,7 @@ export function makeCyclist(variant = 0) {
   const J = lin(V.jersey), J2 = lin(V.jersey2), SK = lin(V.skin), K = lin(0x1d1d22), HR = lin(V.hair);
   const thL = legs.map((L) => localizer(root, L.thigh)), toL = localizer(root, torso);
   sculptSkinned(root, S, M.critter, {
-    step: 0.011, sigma: 0.02,
+    step: 0.011, sigma: 0.02, cacheKey: 'cyclist', colorKey: 'v' + (variant % 2),
     colorFn: (x, y, z, nx, ny, nz, P) => {
       const n = 0.95 + fnoise(x, y, z) * 0.1, t = P.tag;
       if (t === 'shorts' || t === 'shoe' || t === 'glove') return mul3(t === 'shoe' ? lin(0xf4f4f4) : K, n);
@@ -1075,7 +1078,15 @@ export function makeCyclist(variant = 0) {
   const helm = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.55), mHelm);
   helm.scale.set(0.135, 0.11, 0.11); helm.position.set(-0.01, 0.1, 0); helm.rotation.z = 0.15; helm.castShadow = true; headB.add(helm);
   for (let i = -2; i <= 2; i++) add(headB, G.box, mDark, [-0.01 + i * 0.03, 0.2 - Math.abs(i) * 0.012, 0], [0.012, 0.01, 0.2]);
-  add(headB, G.sphere, phys(0x1a1030, { roughness: 0.05, metalness: 0.6, extra: { iridescence: 1, iridescenceIOR: 1.7 } }), [0.085, 0.075, 0], [0.025, 0.022, 0.085], [0, 0, 0], false);
+  add(headB, G.sphere, mDark, [0.085, 0.075, 0], [0.025, 0.022, 0.085], [0, 0, 0], false); // sunglasses
+  // bake the rigid parts, one skinned mesh per material
+  const parts = new Map();
+  root.traverse((o) => { if (o.isMesh && !o.isSkinnedMesh) { if (!parts.has(o.material)) parts.set(o.material, []); parts.get(o.material).push(o); } });
+  root.updateMatrixWorld(true);
+  for (const [mat, list] of parts) {
+    const m = bakeRigid(root, list.map((mesh) => ({ mesh, owner: mesh.parent, center: null })), mat);
+    m.castShadow = mat !== mMetal; // rims, spokes and chainring: too fine to show in a shadow
+  }
   const st = { crank: 0, wob: 0, t: Math.random() * 5, stink: 0 };
   function update(dt, b) {
     st.t += dt;
