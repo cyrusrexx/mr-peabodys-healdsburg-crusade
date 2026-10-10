@@ -1,6 +1,6 @@
 import { WORLD, TREATS, TREAT_PICKS } from './world.js';
 import { input, clearJustPressed, justPressed, isTouchDevice } from './input.js';
-import { sfx, toggleMute, muted, setMusicLevel, getMusicLevel } from './audio.js';
+import { sfx, toggleMute, muted, setMusicLevel, getMusicLevel, musicOnOff } from './audio.js';
 import { SKILLS } from './game.js';
 
 const $ = (id) => document.getElementById(id);
@@ -118,7 +118,8 @@ export class UI {
     const last = SKILLS.length - 1, render = () => this.renderPause();
     this.sliders = [null,
       slider($('pz-diff'), { steps: SKILLS.length, get: () => (this.game ? this.game.skill / last : 0.5), set: (v) => this.game?.setSkill(v * last), render }),
-      slider($('pz-music'), { steps: 21, get: getMusicLevel, set: setMusicLevel, render }),
+      // on an iPhone or iPad the music's level is the phone's own: Off and On (audio.js → musicOnOff)
+      slider($('pz-music'), { steps: musicOnOff ? 2 : 21, get: getMusicLevel, set: setMusicLevel, render }),
     ];
     // touching a row makes it the one the keys work on
     document.querySelectorAll('#pause .pz-row').forEach((r) => r.addEventListener('pointerdown', () => { if (this.pz.sel !== +r.dataset.row) { this.pz.sel = +r.dataset.row; this.renderPause(); } }));
@@ -129,7 +130,7 @@ export class UI {
   }
   renderPause() {
     const g = this.game; if (!g) return;
-    const sk = SKILLS[g.skill], dv = g.skill / (SKILLS.length - 1), mv = getMusicLevel(), pct = Math.round(mv * 100), mt = mv <= 0 ? 'Off' : pct + '%';
+    const sk = SKILLS[g.skill], dv = g.skill / (SKILLS.length - 1), mv = getMusicLevel(), pct = Math.round(mv * 100), mt = mv <= 0 ? 'Off' : musicOnOff ? 'On' : pct + '%';
     const put = (id, v, now, text) => { const el = $(id); el.querySelector('.pz-fill').style.transform = `scaleX(${v})`; el.querySelector('.pz-knob').style.left = (v * 100) + '%'; el.setAttribute('aria-valuenow', now); el.setAttribute('aria-valuetext', text); };
     put('pz-diff', dv, g.skill, sk.name); $('pz-diff-val').textContent = sk.name; $('pz-about').textContent = sk.about;
     document.querySelectorAll('#pause .pz-marks span').forEach((s, i) => s.classList.toggle('on', i === g.skill));

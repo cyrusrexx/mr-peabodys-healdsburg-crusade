@@ -67,7 +67,7 @@ On a touch screen the buttons sit in the bottom corners and the gesture tips sho
 | HUD, menus, boss bar, power chips | `src/ui.js`, `index.template.html` |
 | Pause panel: difficulty and music volume | `ui.js → buildPause()/tickPause()`, `game.js → setPaused()/setSkill()` and `SKILLS` (Easy / Normal / Hard; Normal holds the game's own numbers), `audio.js → setMusicLevel()` |
 | Input (keyboard + touch) | `src/input.js` |
-| Audio (music, bark, SFX) | `src/audio.js`. The music's volume: the `<audio>` element's own `volume`, except on iPhone/iPad, which ignore it: there the music plays through Web Audio and a gain node sets its level |
+| Audio (music, bark, SFX) | `src/audio.js`. The music's volume: the `<audio>` element's own `volume`. iPhone and iPad ignore it: there the pause panel's Music is Off and On, Off and the sound button muting the element (`muted`), and the level is the phone's own. Not through Web Audio: routed there, the music went silent on an iPhone (10 Oct 2026) |
 | Post-processing, particles | `src/fx.js` |
 
 ### Storefronts

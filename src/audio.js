@@ -16,35 +16,24 @@ let musicWanted = false;
 // volume 0.38, as before; 1 is the track at full volume; the curve between follows loudness rather than amplitude.
 // While paused the music plays on at a third of that.
 const MUSIC_MIX = 0.38, MUSIC_DEFAULT = 0.6, PAUSE_DUCK = 0.35;
-let musicLevel = MUSIC_DEFAULT, musicDucked = false, unlocking = false;
 export const musicGainFor = (level) => (level <= 0 ? 0 : Math.min(1, MUSIC_MIX * Math.pow(level / MUSIC_DEFAULT, Math.log(1 / MUSIC_MIX) / Math.log(1 / MUSIC_DEFAULT))));
-// iPhone and iPad ignore an <audio> element's volume (it always reads 1). There the music is played through Web Audio,
-// where a gain node sets its level; everywhere else the element's own volume does, as it always has.
+// iPhone and iPad ignore an <audio> element's volume (it always reads 1). The music once went through Web Audio there,
+// a gain node setting its level, and on an iPhone it went silent (10 Oct 2026: "Peabody is missing music"), so it plays
+// from the <audio> element on every device, as it always had. There its level is the phone's own: the slider is Off and
+// On (musicOnOff), and Off, or the sound button, mutes the element, which an iPhone does honour. Its first play, on the
+// first tap, stays unmuted there, as before: a muted play may start without a real tap, and leave the track refused later.
 const APPLE_TOUCH = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const VOLUME_IGNORED = APPLE_TOUCH || (() => { try { const a = document.createElement('audio'); a.volume = 0.5; return Math.abs(a.volume - 0.5) > 0.01; } catch (e) { return false; } })();
-let musicGain = null;
+export const musicOnOff = VOLUME_IGNORED;
+let musicLevel = VOLUME_IGNORED ? 1 : MUSIC_DEFAULT, musicDucked = false, unlocking = false;
 function applyMusicVolume() {
-  const v = muted || unlocking ? 0 : musicGainFor(musicLevel) * (musicDucked ? PAUSE_DUCK : 1);
-  if (musicGain) { const t = ac.currentTime; musicGain.gain.cancelScheduledValues(t); musicGain.gain.setTargetAtTime(v, t, unlocking ? 0.001 : 0.05); }
-  else bgMusic.volume = v;
+  if (VOLUME_IGNORED) { bgMusic.muted = muted || musicLevel <= 0; return; }
+  bgMusic.volume = muted || unlocking ? 0 : musicGainFor(musicLevel) * (musicDucked ? PAUSE_DUCK : 1);
 }
-function routeMusic() {
-  if (musicGain || !ac || !VOLUME_IGNORED) return;
-  try {
-    const src = ac.createMediaElementSource(bgMusic);
-    const g = ac.createGain(); g.gain.value = 0;
-    src.connect(g).connect(ac.destination);
-    musicGain = g; bgMusic.volume = 1;
-    // keep the music playing in Silent Mode, as the plain <audio> element did
-    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
-  } catch (e) { musicGain = null; }
-  applyMusicVolume();
-}
-const wake = () => { if (musicGain && ac && ac.state !== 'running' && ac.state !== 'closed' && !document.hidden) ac.resume().catch(() => {}); };
 export function setMusicLevel(level) { musicLevel = Math.max(0, Math.min(1, +level || 0)); applyMusicVolume(); }
 export function getMusicLevel() { return musicLevel; }
 export function setMusicPaused(on) { musicDucked = !!on; applyMusicVolume(); }
-export function musicState() { return { routed: !!musicGain, level: musicLevel, ducked: musicDucked, gain: musicGain ? musicGain.gain.value : null, volume: bgMusic.volume, target: muted ? 0 : musicGainFor(musicLevel) * (musicDucked ? PAUSE_DUCK : 1), context: ac ? ac.state : null, paused: bgMusic.paused }; }
+export function musicState() { return { onOff: musicOnOff, level: musicLevel, ducked: musicDucked, volume: bgMusic.volume, muted: bgMusic.muted, target: muted ? 0 : musicGainFor(musicLevel) * (musicDucked ? PAUSE_DUCK : 1), paused: bgMusic.paused }; }
 
 export function initAudio() {
   if (!ac) {
@@ -65,7 +54,6 @@ export function initAudio() {
     } catch (e) { ac = null; }
   }
   if (ac && ac.state !== 'running' && ac.state !== 'closed') ac.resume();
-  routeMusic();
   loadBark();
   unlockMusic();
 }
@@ -97,18 +85,16 @@ export function toggleMute() {
 // Leaving the page (tab switch, app background, navigation) stops the music; it comes back when you return.
 // NOTE: we deliberately do NOT pause on window 'blur' — inside an embedding frame focus hops around
 // (on-screen buttons, the keyboard trap, parent UI) and that used to cut the music out mid-run.
-// (Played through Web Audio on iPhone/iPad, its context is suspended with the page too, and woken when it comes back.)
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { bgMusic.pause(); if (musicGain) ac.suspend().catch(() => {}); } else { wake(); if (musicWanted) bgMusic.play().catch(() => {}); }
+  if (document.hidden) bgMusic.pause(); else if (musicWanted) bgMusic.play().catch(() => {});
 });
-window.addEventListener('pagehide', () => { bgMusic.pause(); if (musicGain) ac.suspend().catch(() => {}); });
-window.addEventListener('pageshow', () => { wake(); if (musicWanted && !document.hidden) bgMusic.play().catch(() => {}); });
+window.addEventListener('pagehide', () => { bgMusic.pause(); });
+window.addEventListener('pageshow', () => { if (musicWanted && !document.hidden) bgMusic.play().catch(() => {}); });
 // Watchdog: if the browser stalls or drops the stream (network hiccup, audio-session interruption on
 // iOS, another tab grabbing audio), quietly resume from where it was instead of staying silent.
 let lastT = 0, stuck = 0;
 setInterval(() => {
   if (!musicWanted || document.hidden || !musicUnlocked) { stuck = 0; return; }
-  wake();
   if (bgMusic.paused || bgMusic.ended) { bgMusic.play().catch(() => {}); return; }
   if (bgMusic.currentTime === lastT && bgMusic.readyState < 3) { if (++stuck > 3) { stuck = 0; try { const t = bgMusic.currentTime; bgMusic.load(); bgMusic.currentTime = t; } catch (e) {} bgMusic.play().catch(() => {}); } }
   else stuck = 0;
@@ -116,7 +102,7 @@ setInterval(() => {
 }, 1000);
 bgMusic.addEventListener('ended', () => { if (musicWanted) { bgMusic.currentTime = 0; bgMusic.play().catch(() => {}); } });
 // any tap/key also nudges music back on if something paused it
-for (const ev of ['pointerdown', 'keydown', 'touchstart']) window.addEventListener(ev, () => { wake(); if (musicWanted && bgMusic.paused && !document.hidden) bgMusic.play().catch(() => {}); }, { passive: true, capture: true });
+for (const ev of ['pointerdown', 'keydown', 'touchstart']) window.addEventListener(ev, () => { if (musicWanted && bgMusic.paused && !document.hidden) bgMusic.play().catch(() => {}); }, { passive: true, capture: true });
 
 // Peabody's real bark (recorded by his owner), inlined as base64 by build.mjs
 const BARK_SRC = '__BARK__';
