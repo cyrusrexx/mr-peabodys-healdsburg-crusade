@@ -14,6 +14,12 @@ export const C = {
   SKY_T: 20, DBL_T: 25, ZOOM_T: 12, MAG_T: 20, ZOOM_BONUS: 3.4,
   KICK_T: 8, FART_T: 4, BARK_T: 15, SHAKE_T: 10, FLY_T: 30, MORTY_T: 5,
   POWER_EVERY: 5,
+  // Jump: how high he jumps, as a share of the height the game was first tuned to (2.1 units, a jump boost adding 0.8 to
+  // its speed): 60% at first (Cyrus, 10 Oct 2026: "Jumps are too extreme reduce the range to about 60% so the power ups
+  // are actually useful. Maybe add a slider in pause menu for jump range"), 40% to 100% on the pause panel. In the
+  // turkey's fight it is never less than the first jump (jumpSpeed). SIZE: a short power now, bigger for SIZE_T seconds
+  // and back ("He also gets too big when growing keep him more consistent size except for short periods of time")
+  JUMP_SCALE: 0.6, JUMP_MIN: 0.4, JUMP_MAX: 1, SIZE_T: 10, SIZE_BIG: 0.2,
   FSK_T: 0.42, FSK_V: 9.5, PUPPY_T: 10, PUPPY_BONUS: 3.2, BOSS_HP: 10, BOSS_SCALE: 3.0,
 };
 
@@ -48,6 +54,7 @@ export class Game {
     this.state = 'menu';
     this.t = 0;
     this.paused = false; this.skill = 1; // difficulty: Normal until changed, for the visit
+    this.jumpScale = C.JUMP_SCALE; // the pause panel's Jump, for the visit
     this.shake = 0; this.hitStop = 0;
     this.cam = { x: 4, y: 0, look: 0, fov: 34 };
     // rigs
@@ -95,7 +102,7 @@ export class Game {
       x: 3, y: 0, vx: 0, vy: 0, facing: 1, grounded: true, coyote: 0, jumpBuf: 0, landT: 0,
       lives: 3, stamina: C.STAMINA_MAX, invT: 0, attackT: 0, attackCd: 0,
       kickT: 0, fartT: 0, barkT: 0, shakeT: 0, flyT: 0, mortyT: 0, hasPee: false,
-      napping: false, napT: 0, peeT: 0, jumpLvl: 0, speedLvl: 0, sizeLvl: 0,
+      napping: false, napT: 0, peeT: 0, jumpLvl: 0, speedLvl: 0, sizeT: 0,
       melons: 0, fish: 0, fishSpent: 0, catKills: 0, pigeonKills: 0, kills: 0,
       combo: 0, comboT: 0, score: 0, onPlat: null, barkAnim: 0, wasUp: false,
       rollT: 0, rollDir: 1, rollCd: 0, trickT: 0, trickCd: 0, tootCd: 0, tootAnim: 0, taps: [],
@@ -167,6 +174,17 @@ export class Game {
     b.hp = Math.max(1, Math.round((b.hp * max) / b.hpMax)); b.hpMax = max;
     this.ui.bossBar?.(b.hp / b.hpMax, false);
   }
+  // Jump on the pause panel: the share of the first jump's height, 40% to 100%; it counts at once
+  setJumpScale(v) { this.jumpScale = clamp(+v || 0, C.JUMP_MIN, C.JUMP_MAX); }
+  // the speed a jump leaves the ground at: height goes as speed squared, so a share of the height is its root. While the
+  // turkey fights, never less than the first jump's, so its charge is jumped over as the fight was made, whatever the
+  // Jump (at 60% he would pass through the giant turkey, or not get over it at all)
+  jumpSpeed() {
+    const v = (C.JUMP + this.p.jumpLvl * C.JUMP_PER) * Math.sqrt(this.jumpScale), b = this.boss;
+    return b.state !== 'wait' && !b.done ? Math.max(v, C.JUMP) : v;
+  }
+  // SIZE: bigger for a while (his reach and his chop's with him), then his own size again
+  bigK() { return this.p.sizeT > 0 ? 1 + C.SIZE_BIG : 1; }
   get fishAvail() { return this.p.fish - this.p.fishSpent; }
 
   startGame() {
@@ -219,7 +237,7 @@ export class Game {
       if (this.cheatSeq.map((c) => c.k).join('') === CHEAT.join('')) { this.cheatSeq = []; this.cheatWarp(); return; }
     }
     // timers
-    for (const k of ['invT', 'kickT', 'fartT', 'barkT', 'shakeT', 'flyT', 'mortyT', 'attackCd', 'landT', 'barkAnim', 'peeT', 'rollT', 'rollCd', 'trickT', 'trickCd', 'tootCd', 'tootAnim', 'skyT', 'dblT', 'zoomT', 'magT', 'fskT', 'puppyT', 'safeT']) {
+    for (const k of ['invT', 'kickT', 'fartT', 'barkT', 'shakeT', 'flyT', 'mortyT', 'attackCd', 'landT', 'barkAnim', 'peeT', 'rollT', 'rollCd', 'trickT', 'trickCd', 'tootCd', 'tootAnim', 'skyT', 'dblT', 'zoomT', 'magT', 'fskT', 'puppyT', 'safeT', 'sizeT']) {
       if (p[k] > 0) {
         const before = p[k];
         p[k] = Math.max(0, p[k] - dt);
@@ -269,11 +287,11 @@ export class Game {
     if (p.jumpBuf > 0) p.jumpBuf -= dt;
     if (p.grounded) p.coyote = 0.1; else p.coyote -= dt;
     if (p.jumpBuf > 0 && p.coyote > 0) {
-      p.vy = C.JUMP + p.jumpLvl * C.JUMP_PER; p.grounded = false; p.coyote = 0; p.jumpBuf = 0; p.onPlat = null;
+      p.vy = this.jumpSpeed(); p.grounded = false; p.coyote = 0; p.jumpBuf = 0; p.onPlat = null;
       sfx.jump(); this.fx.dust(p.x, p.y, 0, 5, p.facing);
     }
     else if (input.jumpPressed() && !p.grounded && p.dblT > 0 && !p.dblUsed && p.flyT <= 0 && p.coyote <= 0) {
-      p.vy = (C.JUMP + p.jumpLvl * C.JUMP_PER) * 0.92; p.dblUsed = true; p.jumpBuf = 0;
+      p.vy = this.jumpSpeed() * 0.92; p.dblUsed = true; p.jumpBuf = 0;
       sfx.jump(); this.fx.ring(p.x, p.y + 0.2, 0, 0xffb85c, 1.1, 0.3); this.fx.sparkle(p.x, p.y + 0.3, 0, 0xffc870, 10, 2);
     }
     if (p.flyT > 0 && input.up() && !p.grounded) { p.vy = Math.max(p.vy, 4); if (Math.random() < dt * 30) this.fx.sparkle(p.x - p.facing * 0.3, p.y + 0.5, 0, 0xbfe6ff, 1, 1); }
@@ -354,7 +372,7 @@ export class Game {
     }
 
     // ── collectibles ──
-    const pcy = p.y + 0.45, sz = 1 + p.sizeLvl * 0.08;
+    const pcy = p.y + 0.45, sz = this.bigK();
     if (p.magT > 0) for (const it of this.items) {
       if (it.taken || Math.abs(it.x - p.x) > 5 || Math.abs(it.y - pcy) > 4.5) continue;
       const k = Math.min(1, dt * 7); it.x += (p.x - it.x) * k; it.y += (pcy - it.y) * k;
@@ -455,7 +473,7 @@ export class Game {
     p.attackT = 1; p.attackCd = C.ATTACK_CD;
     const kick = p.kickT > 0;
     const air = !p.grounded, sky = p.skyT > 0;
-    const range = C.RANGE * (kick ? 1.3 : 1) * (1 + p.sizeLvl * 0.08); // kick ≈ 2.3u past Peabody
+    const range = C.RANGE * (kick ? 1.3 : 1) * this.bigK(); // kick ≈ 2.3u past Peabody
     sfx.chop();
     // ── airborne = FLYING SIDE KICK: lunge forward with the leg out, sweeping birds out of the sky ──
     if (air && p.flyT <= 0 && p.fskT <= 0) {
@@ -536,7 +554,7 @@ export class Game {
   fskSweep() {
     // the extended leg sweeps a box ahead of Peabody for the whole kick
     const p = this.p; let hit = false;
-    const reach = 2.3 * (1 + p.sizeLvl * 0.08) + (p.skyT > 0 ? 0.6 : 0);
+    const reach = 2.3 * this.bigK() + (p.skyT > 0 ? 0.6 : 0);
     for (const e of this.enemies) {
       if (!e.alive) continue;
       const dx = (e.x - p.x) * p.facing, ey = e.type === 'pigeon' ? e.y : e.y + 0.3, dy = ey - (p.y + 0.45);
@@ -795,7 +813,7 @@ export class Game {
       this.fx.sparkle(it.x, it.y, 0, 0x9fdcff, 12);
       if (p.fish % C.POWER_EVERY === 0) {
         if ((p.fish / C.POWER_EVERY) % 2 === 1) { p.speedLvl++; this.popText('SPEED UP!', '#7ee3ff'); }
-        else { p.sizeLvl++; this.popText('SIZE UP!', '#c6ff7e'); }
+        else { p.sizeT = C.SIZE_T; this.popText('SIZE UP!', '#c6ff7e'); }
         sfx.powerUp(); this.fx.ring(p.x, p.y + 0.5, 0.1, 0x9fdcff, 1.6, 0.4);
       }
     }
@@ -818,7 +836,6 @@ export class Game {
     if (p.stamina <= 0) {
       if (p.jumpLvl > 0) { p.jumpLvl--; this.popText('JUMP -1', '#ff5252', 1); }
       else if (p.speedLvl > 0) { p.speedLvl--; this.popText('SPEED -1', '#ff5252', 1); }
-      else if (p.sizeLvl > 0) { p.sizeLvl--; this.popText('SIZE -1', '#ff5252', 1); }
     }
     if (p.kickT > 0) p.kickT = Math.max(0, p.kickT - 2);
     this.ui.flashDamage();
@@ -829,7 +846,7 @@ export class Game {
   }
 
   onPowerEnd(k) {
-    const map = { puppyT: 'PUPPY RUN OVER', skyT: 'SKY CHOP OVER', dblT: 'DOUBLE JUMP OVER', zoomT: 'ZOOMIES OVER', magT: 'MAGNET OVER', kickT: 'KICK MODE OFF', fartT: 'FART OVER', barkT: 'BARK OVER', shakeT: 'SHAKE WORE OFF', flyT: 'FLIGHT OVER', mortyT: '' };
+    const map = { puppyT: 'PUPPY RUN OVER', skyT: 'SKY CHOP OVER', dblT: 'DOUBLE JUMP OVER', zoomT: 'ZOOMIES OVER', magT: 'MAGNET OVER', kickT: 'KICK MODE OFF', fartT: 'FART OVER', barkT: 'BARK OVER', shakeT: 'SHAKE WORE OFF', flyT: 'FLIGHT OVER', mortyT: '', sizeT: 'SIZE OVER' };
     if (map[k]) this.popText(map[k], '#cfcfcf', 0.9, 1.4, '');
   }
 
@@ -1317,7 +1334,7 @@ export class Game {
     // Peabody
     const pr = this.peabody;
     pr.root.position.set(p.x, p.y, 0);
-    const sz = (1 + p.sizeLvl * 0.08) * 1.4;
+    const sz = this.bigK() * 1.4;
     pr.root.scale.setScalar(damp(pr.root.scale.x, sz, 6, dt));
     pr.root.visible = !(p.invT > 0 && Math.sin(t * 30) > 0.6 && this.state === 'playing');
     pr.update(dt, {
@@ -1388,7 +1405,7 @@ export class Game {
       state: this.state, paused: this.paused, difficulty: this.sk.id, x: +p.x.toFixed(2), y: +p.y.toFixed(2), vx: +p.vx.toFixed(2), vy: +p.vy.toFixed(2), grounded: p.grounded,
       score: p.score, lives: p.lives, stamina: Math.round(p.stamina), combo: p.combo,
       melons: p.melons, fish: p.fish, fishAvail: this.fishAvail, catKills: p.catKills, pigeonKills: p.pigeonKills,
-      powers: { kick: +p.kickT.toFixed(1), fart: +p.fartT.toFixed(1), bark: +p.barkT.toFixed(1), shake: +p.shakeT.toFixed(1), fly: +p.flyT.toFixed(1), morty: +p.mortyT.toFixed(1), pee: p.hasPee, jumpLvl: p.jumpLvl, speedLvl: p.speedLvl, sizeLvl: p.sizeLvl },
+      powers: { kick: +p.kickT.toFixed(1), fart: +p.fartT.toFixed(1), bark: +p.barkT.toFixed(1), shake: +p.shakeT.toFixed(1), fly: +p.flyT.toFixed(1), morty: +p.mortyT.toFixed(1), pee: p.hasPee, jumpLvl: p.jumpLvl, speedLvl: p.speedLvl, size: +p.sizeT.toFixed(1), jumpScale: this.jumpScale },
       napping: p.napping, nearDoor: !!this.nearDoor, nearPet: !!this.nearPet, treats: p.treats, shield: p.shield, sky: +p.skyT.toFixed(1), dbl: +p.dblT.toFixed(1), boss: { state: this.boss.state, x: +this.boss.x.toFixed(1), hp: this.boss.hp }, puppy: +p.puppyT.toFixed(1), fsk: p.fskT > 0, bikes: this.bikes.map((b) => (b.active ? +b.x.toFixed(1) : b.done ? 'done' : 'waiting')), chicken: !!this.chicken, morty: this.morty.state, possum: this.possum.state,
       enemiesNear: this.enemies.filter((e) => e.alive && Math.abs(e.x - p.x) < 10).map((e) => ({ t: e.type, x: +e.x.toFixed(1), y: +e.y.toFixed(1), frozen: e.frozenT > 0 })),
       itemsNear: this.items.filter((i) => !i.taken && Math.abs(i.x - p.x) < 8).length,

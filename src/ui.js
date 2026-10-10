@@ -1,7 +1,7 @@
 import { WORLD, TREATS, TREAT_PICKS } from './world.js';
 import { input, clearJustPressed, justPressed, isTouchDevice } from './input.js';
 import { sfx, toggleMute, muted, setMusicLevel, getMusicLevel, musicOnOff } from './audio.js';
-import { SKILLS } from './game.js';
+import { SKILLS, C } from './game.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -58,6 +58,7 @@ const POWERS = [
   { k: 'zoomT', label: 'ZOOMIES', max: 12, col: '#ff5a5a' },
   { k: 'magT', label: 'MAGNET', max: 20, col: '#e8b018' },
   { k: 'puppyT', label: 'PUPPY RUN', max: 10, col: '#ff8fc0' },
+  { k: 'sizeT', label: 'SIZE', max: C.SIZE_T, col: '#c6ff7e' },
 ];
 
 export class UI {
@@ -109,7 +110,7 @@ export class UI {
       }
     }
   }
-  // ── pause panel: Resume, difficulty, music volume ──
+  // ── pause panel: Resume, difficulty, jump, music volume ──
   buildPause() {
     $('pause-btn').innerHTML = ICON.pause;
     $('pause-btn').addEventListener('click', (e) => { e.stopPropagation(); this.game?.setPaused(true); });
@@ -118,6 +119,8 @@ export class UI {
     const last = SKILLS.length - 1, render = () => this.renderPause();
     this.sliders = [null,
       slider($('pz-diff'), { steps: SKILLS.length, get: () => (this.game ? this.game.skill / last : 0.5), set: (v) => this.game?.setSkill(v * last), render }),
+      // Jump: how high he jumps, 40% to 100% of the first jump's height, in tens (game.js → C.JUMP_SCALE)
+      slider($('pz-jump'), { steps: Math.round((C.JUMP_MAX - C.JUMP_MIN) * 10) + 1, get: () => ((this.game ? this.game.jumpScale : C.JUMP_SCALE) - C.JUMP_MIN) / (C.JUMP_MAX - C.JUMP_MIN), set: (v) => this.game?.setJumpScale(C.JUMP_MIN + v * (C.JUMP_MAX - C.JUMP_MIN)), render }),
       // on an iPhone or iPad the music's level is the phone's own: Off and On (audio.js → musicOnOff)
       slider($('pz-music'), { steps: musicOnOff ? 2 : 21, get: getMusicLevel, set: setMusicLevel, render }),
     ];
@@ -134,6 +137,8 @@ export class UI {
     const put = (id, v, now, text) => { const el = $(id); el.querySelector('.pz-fill').style.transform = `scaleX(${v})`; el.querySelector('.pz-knob').style.left = (v * 100) + '%'; el.setAttribute('aria-valuenow', now); el.setAttribute('aria-valuetext', text); };
     put('pz-diff', dv, g.skill, sk.name); $('pz-diff-val').textContent = sk.name; $('pz-about').textContent = sk.about;
     document.querySelectorAll('#pause .pz-marks span').forEach((s, i) => s.classList.toggle('on', i === g.skill));
+    const jp = Math.round(g.jumpScale * 100);
+    put('pz-jump', (g.jumpScale - C.JUMP_MIN) / (C.JUMP_MAX - C.JUMP_MIN), jp, jp + '%'); $('pz-jump-val').textContent = jp + '%';
     put('pz-music', mv, pct, mt); $('pz-music-val').textContent = mt;
     document.querySelectorAll('#pause .pz-row').forEach((r) => r.classList.toggle('sel', +r.dataset.row === this.pz.sel));
   }
@@ -142,7 +147,8 @@ export class UI {
     const J = justPressed;
     if (J.KeyP || J.Space || J.Enter) { g.setPaused(false); return; }
     const v = (J.ArrowDown || J.KeyS ? 1 : 0) - (J.ArrowUp || J.KeyW ? 1 : 0);
-    if (v) { this.pz.sel = (this.pz.sel + v + 3) % 3; sfx.ui(); this.renderPause(); }
+    const rows = this.sliders.length;
+    if (v) { this.pz.sel = (this.pz.sel + v + rows) % rows; sfx.ui(); this.renderPause(); }
     const d = (J.ArrowRight || J.KeyD ? 1 : 0) - (J.ArrowLeft || J.KeyA ? 1 : 0);
     if (d && this.sliders[this.pz.sel]) { this.sliders[this.pz.sel].step(d); sfx.ui(); }
     clearJustPressed();
@@ -192,7 +198,6 @@ export class UI {
     if (p.hasPee) chips.push('<div class="chip perm" style="--c:#f6e04a;--f:1"><b>PEE</b><i>↓</i></div>');
     if (p.jumpLvl) chips.push(`<div class="chip lvl" style="--c:#ff7b8f;--f:1"><b>JUMP</b><i>+${p.jumpLvl}</i></div>`);
     if (p.speedLvl) chips.push(`<div class="chip lvl" style="--c:#7ee3ff;--f:1"><b>SPEED</b><i>+${p.speedLvl}</i></div>`);
-    if (p.sizeLvl) chips.push(`<div class="chip lvl" style="--c:#c6ff7e;--f:1"><b>SIZE</b><i>+${p.sizeLvl}</i></div>`);
     const ch = chips.join('');
     this.set('powers', ch, 'innerHTML');
     // progress
@@ -253,6 +258,7 @@ export class UI {
         <span class="si-cost">${it.cost ? `${it.cost} <em>${ICON.fish}</em>` : 'FREE'}</span>
       </button>`).join('');
     $('shop-items').querySelectorAll('.shop-item').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); g.shopSel = +el.dataset.i; g.buy(g.shopSel); }));
+    $('shop-items').querySelector('.sel')?.scrollIntoView({ block: 'nearest' }); // the list scrolls where the screen is short
   }
 
   // ── end screens ──

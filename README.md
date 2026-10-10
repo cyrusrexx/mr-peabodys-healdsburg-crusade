@@ -33,11 +33,11 @@ npm start            # serves dist/ at http://localhost:3000  (add ?debug for th
 | Input | Action |
 | --- | --- |
 | ← / → | Move |
-| ↑ | Jump (double jump with the Pup-Cake treat) |
+| ↑ | Jump (double jump with the Pup-Cake treat). How high: the pause panel's Jump, 60% of the first jump's height to start |
 | Space | Chop / kick. In the air it's a flying side kick |
 | ↓ | Nap on a dog bed; pee once the burger is bought (permanent) |
-| ← or EXIT SHOP | Leave Iggy's Burgers |
-| P or the pause button | Pause (the clock stops, the music plays on, quieter). P, Space or RESUME to go on; on the panel ↑/↓ choose, ←/→ change. Leaving the page pauses too |
+| ← or EXIT SHOP | Leave Iggy's Burgers. On a touch screen a tap on an item buys it; the list scrolls where the screen is short |
+| P or the pause button | Pause (the clock stops, the music plays on, quieter). P, Space or RESUME to go on; on the panel (Difficulty, Jump, Music) ↑/↓ choose, ←/→ change. Leaving the page pauses too |
 | Pet shop | ←/→ choose, Space take, ↓ or LEAVE SHOP to leave |
 
 On a touch screen the buttons sit in the bottom corners and the gesture tips show, for the first two runs of a visit, in the space between them (above them on a phone held upright), never over the HUD. The game plays held upright or sideways; it doesn't ask to be turned. The site's logo (Cyrusrex), top left, links to the site's home (`/`).
@@ -65,7 +65,10 @@ On a touch screen the buttons sit in the bottom corners and the gesture tips sho
 | Town geometry, facades, awnings, benches | `src/env.js` |
 | Shop names, real-store colors, sign styles, materials | `src/materials.js → SHOP_PROFILE` |
 | HUD, menus, boss bar, power chips | `src/ui.js`, `index.template.html` |
-| Pause panel: difficulty and music volume | `ui.js → buildPause()/tickPause()`, `game.js → setPaused()/setSkill()` and `SKILLS` (Easy / Normal / Hard; Normal holds the game's own numbers), `audio.js → setMusicLevel()` |
+| Pause panel: difficulty, jump and music volume | `ui.js → buildPause()/tickPause()`, `game.js → setPaused()/setSkill()/setJumpScale()` and `SKILLS` (Easy / Normal / Hard; Normal holds the game's own numbers), `audio.js → setMusicLevel()` |
+| Jump height (Cyrus, 10 Oct 2026: "Jumps are too extreme reduce the range to about 60% so the power ups are actually useful"): 60% of the height the game was first tuned to (`C.JUMP_SCALE`), 40% to 100% on the pause panel's Jump, for the visit; a JUMP UP's boost the same share of its own. While the turkey fights, never under the first jump, so its charge is jumped over as the fight was made (at 60% he would pass through the giant turkey) | `game.js → jumpSpeed()`, `C.JUMP_SCALE/JUMP_MIN/JUMP_MAX` |
+| Collecting: every 5 melons JUMP UP (kept until lost to a hurt), every 5 minnows SPEED UP and SIZE UP in turn. SIZE is a short power ("keep him more consistent size except for short periods of time"): a fifth bigger, his reach with him, for 10 s, its timer among the HUD's | `game.js → collect()`, `bigK()`, `C.SIZE_T/SIZE_BIG`; `ui.js → POWERS` |
+| Iggy's on a phone: the card fits the screen as Safari shows it (a height in `vh` is Safari's tallest screen, its bars hidden), its title and EXIT SHOP always in view, only its list scrolling; upright it sits under the HUD, sideways clear of the sound button; the on-screen controls put away while it is open | `index.template.html` → shop |
 | Input (keyboard + touch) | `src/input.js` |
 | Audio (music, bark, SFX) | `src/audio.js`. The music's volume: the `<audio>` element's own `volume`. iPhone and iPad ignore it: there the pause panel's Music is Off and On, Off and the sound button muting the element (`muted`), and the level is the phone's own. Not through Web Audio: routed there, the music went silent on an iPhone (10 Oct 2026) |
 | Post-processing, particles | `src/fx.js` |
