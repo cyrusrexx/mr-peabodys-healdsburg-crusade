@@ -120,7 +120,7 @@ function initGestures() {
   let mover = null;
   const others = new Set();
   const playing = () => document.body.dataset.mode === 'hud';
-  const ignore = (t) => t && t.closest && t.closest('button, a, .tbtn, #touch-controls, .card, #rotate, #gesture-hint');
+  const ignore = (t) => t && t.closest && t.closest('button, a, .tbtn, #touch-controls, .card, #gesture-hint');
   const ripple = (x, y, cls) => {
     const r = document.createElement('span'); r.className = 'tap-ripple ' + (cls || '');
     r.style.left = x + 'px'; r.style.top = y + 'px'; document.body.appendChild(r);

@@ -93,11 +93,6 @@ export class UI {
         b.classList.remove('gest-on'); void b.offsetWidth; b.classList.add('gest-on');
         clearTimeout(this._gT); this._gT = setTimeout(() => b.classList.remove('gest-on'), 9000);
       }
-      // gentle (non-blocking) landscape tip, once per session
-      if (b.classList.contains('portrait') && !this._rotTip) {
-        this._rotTip = true; b.classList.add('rot-show');
-        setTimeout(() => b.classList.remove('rot-show'), 5000);
-      }
     }
   }
   skipInitials() {
@@ -123,9 +118,9 @@ export class UI {
   updateHUD(g) {
     const p = g.p;
     this.set('score', p.score.toLocaleString());
-    const combo = p.combo > 1 ? `×${p.combo} COMBO` : '';
-    this.set('combo', combo);
-    $('combo').classList.toggle('on', p.combo > 1);
+    const combo = p.combo > 1 ? `×${p.combo}<span> COMBO</span>` : '';
+    this.set('combo', combo, 'innerHTML');
+    if (this.cache.comboOn !== p.combo > 1) { this.cache.comboOn = p.combo > 1; $('combo').classList.toggle('on', p.combo > 1); $('score').parentElement.classList.toggle('combo', p.combo > 1); }
     for (let i = 0; i < 3; i++) { const el = document.querySelector(`.life[data-i="${i}"]`); const on = i < p.lives; if (el.dataset.on !== String(on)) { el.dataset.on = on; el.classList.toggle('lost', !on); } }
     const st = Math.round(p.stamina);
     if (this.cache.st !== st) {
@@ -158,11 +153,12 @@ export class UI {
       else if (p.grounded && p.stamina < 100 && g.beds.some((b) => Math.abs(p.x - b.x) < 0.65 && Math.abs(p.y - b.y) < 0.1)) prompt = 'Hold ↓ to nap on the dog bed';
     }
     this.set('prompt', prompt);
-    $('prompt').classList.toggle('on', !!prompt);
+    if (this.cache.promptOn !== !!prompt) { this.cache.promptOn = !!prompt; $('prompt').classList.toggle('on', !!prompt); document.body.classList.toggle('prompt-on', !!prompt); }
   }
   bossBar(frac, hit = false) {
     const b = $('bossbar'); if (!b) return;
     b.classList.toggle('on', frac !== null && frac !== undefined);
+    document.body.classList.toggle('boss-on', frac !== null && frac !== undefined); // on phones and tablets the bar takes the progress bar's place
     if (frac !== null && frac !== undefined) { const v = Math.max(0, frac).toFixed(3); if (this.cache.boss !== v) { this.cache.boss = v; $('boss-fill').style.transform = `scaleX(${v})`; } b.classList.toggle('hit', hit); }
   }
   flashDamage() { const d = $('damage'); d.classList.remove('go'); void d.offsetWidth; d.classList.add('go'); }

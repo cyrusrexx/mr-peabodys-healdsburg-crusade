@@ -129,7 +129,6 @@ async function boot() {
     camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
     buildComposer();
     if (typeof render === 'function' && grade) { try { render(); } catch (e) {} }
-    document.body.classList.toggle('portrait', window.innerHeight > window.innerWidth && isMobile);
   }
   window.addEventListener('resize', onResize);
   onResize();

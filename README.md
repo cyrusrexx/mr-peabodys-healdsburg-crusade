@@ -38,6 +38,8 @@ npm start            # serves dist/ at http://localhost:3000  (add ?debug for th
 | ← or EXIT SHOP | Leave Iggy's Burgers |
 | Pet shop | ←/→ choose, Space take, ↓ or LEAVE SHOP to leave |
 
+On a touch screen the buttons sit in the bottom corners and the gesture tips show, for the first two runs of a visit, in the space between them (above them on a phone held upright), never over the HUD. The game plays held upright or sideways; it doesn't ask to be turned. The site's logo (Cyrusrex), top left, links to the site's home (`/`).
+
 ### Cheat codes (skip to the final quarter)
 - **Keyboard / on-screen arrows:** ↑ ↑ ↓ ↓ ← → ← → within 5 seconds → "CHEAT: WARP TO THE END!" (full lives and stamina, lands at x = 362 before the boss and Jessica).
 - **Touch:** tap the progress bar at the top 5 times within 2.5 seconds.
