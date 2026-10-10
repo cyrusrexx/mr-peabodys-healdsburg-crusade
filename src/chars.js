@@ -1106,6 +1106,123 @@ export function makeCyclist(variant = 0) {
   return { root, update };
 }
 
+// ───────────────────────── OPOSSUM ─────────────────────────
+// Peabody's friend, a Virginia opossum as they wander Healdsburg's back yards at dusk: grizzled grey coat, white face,
+// pink nose, round black ears with pale rims, bead-black eyes, short dark legs with pink toes and a long bare pink tail.
+// The lower jaw is its own hinged piece, so the mouth opens on a pink mouth and little teeth for its (all bluff) hiss,
+// and chews. state: { facing, mouth 0..1, chew (s), happy 0..1, walk (speed) }.
+export function makePossum() {
+  critterMats();
+  M.possumEar ||= std(0x1d1a1b, { roughness: 0.7, rimColor: 0xf0e4e4, rimStrength: 0.35 });
+  M.possumEarRim ||= std(0xb9aea9, { roughness: 0.8, rim: false });
+  M.possumNose ||= std(0xec9aac, { roughness: 0.35 });
+  M.possumMouth ||= std(0xb8455e, { roughness: 0.5, rim: false });
+  M.possumJaw ||= std(0xf2ede6, { roughness: 0.8, rimColor: 0xffffff, rimStrength: 0.3 });
+  M.tooth ||= std(0xfffcf2, { roughness: 0.25, rim: false });
+  M.whisker ||= std(0xfffaf0, { roughness: 0.5 });
+  const root = new THREE.Group();
+  const yaw = group(root); const body = group(yaw, [0, 0.235, 0]);
+  const head = group(body, [0.215, 0.045, 0]);
+  const jaw = group(head, [0.04, -0.034, 0]);
+  const tail = group(body, [-0.215, -0.005, 0], [0, 0, 2.05]);
+  const tail2 = group(tail, [0, 0.14, 0], [0, 0, -0.75]);
+  const tail3 = group(tail2, [0, 0.13, 0], [0, 0, -0.85]);
+  const legs = [];
+  for (const [x, z] of [[0.12, 0.075], [0.12, -0.075], [-0.13, 0.08], [-0.13, -0.08]]) legs.push(group(body, [x, -0.07, z]));
+  const S = [
+    { bone: body, ell: [0, 0.005, 0], r: [0.2, 0.12, 0.115], k: 0.06, tag: 'body' },
+    { bone: body, ell: [-0.13, 0.0, 0], r: [0.11, 0.118, 0.112], k: 0.06, tag: 'body' },
+    { bone: body, ell: [0.13, -0.015, 0], r: [0.1, 0.098, 0.092], k: 0.05, tag: 'chest' },
+    { bone: body, ell: [-0.03, 0.065, 0], r: [0.17, 0.07, 0.095], k: 0.05, tag: 'back' },
+    { bone: head, cone: [-0.02, -0.02, 0, -0.11, -0.05, 0], r: [0.058, 0.08], k: 0.05, tag: 'neck' },
+    { bone: head, ell: [0, 0.005, 0], r: [0.075, 0.066, 0.068], k: 0.03, tag: 'face' },
+    { bone: head, ell: [0.015, -0.018, 0.038], r: [0.05, 0.04, 0.034], mirrorZ: true, k: 0.03, tag: 'face' },
+    { bone: head, cone: [0.03, -0.012, 0, 0.165, -0.036, 0], r: [0.044, 0.014], k: 0.025, tag: 'snout' },
+    { bone: tail, cone: [0, 0, 0, 0, 0.14, 0], r: [0.036, 0.027], k: 0.03, tag: 'tailbase' },
+    { bone: tail2, cone: [0, 0, 0, 0, 0.13, 0], r: [0.027, 0.018], k: 0.015, tag: 'tail' },
+    { bone: tail3, cone: [0, 0, 0, 0, 0.12, 0], r: [0.018, 0.006], k: 0.01, tag: 'tail' },
+  ];
+  legs.forEach((l, i) => {
+    S.push({ bone: l, ell: [0, -0.01, 0], r: [0.05, 0.07, 0.042], k: 0.035, tag: 'leg' });
+    S.push({ bone: l, cone: [0, 0.01, 0, 0.012, -0.14, 0], r: [i < 2 ? 0.032 : 0.035, 0.022], k: 0.025, tag: 'leg' });
+    S.push({ bone: l, ell: [0.024, -0.152, 0], r: [0.036, 0.014, 0.03], k: 0.015, tag: 'paw' });
+  });
+  const Wh = lin(0xf4f0ea), Gl = lin(0xa8a3a1), Gm = lin(0x6d6969), Gd = lin(0x383435), Lg = lin(0x262222), Pk = lin(0xe7a8ad), Pt = lin(0xd9a2a4), Tb = lin(0x4a4444);
+  const hl = localizer(root, head), tl = localizer(root, tail);
+  const grizzle = (x, y, z) => { const g = fnoise(x * 3.3 + 1, y * 3.3, z * 3.3), f = fnoise(x * 9, y * 9 + 2, z * 9); return mix3(mix3(Gm, Gd, sat(0.6 - g * 1.4)), Gl, sat(f * 2.2 - 1.1)); };
+  sculptSkinned(root, S, M.critter, {
+    step: 0.0075, sigma: 0.014, cacheKey: 'possum',
+    colorFn: (x, y, z, nx, ny, nz, P) => {
+      const n = 0.92 + fnoise(x, y, z) * 0.16, t = P.tag;
+      if (t === 'tail') return mul3(Pt, 0.96 + fnoise(x * 2, y * 2, z * 2) * 0.08);
+      if (t === 'tailbase') { const L = tl(x, y, z); return mul3(mix3(Tb, Pt, sat((L.y - 0.04) * 9)), n); }
+      if (t === 'paw') return mul3(Pk, n);
+      if (t === 'leg') return mul3(mix3(Lg, Gd, sat((y - 0.16) * 6)), n);
+      if (t === 'snout') return mul3(Wh, n);
+      if (t === 'face') { const L = hl(x, y, z); if (L.y > 0.035 && L.x < 0.02) return mul3(mix3(Wh, Gl, 0.45), n); return mul3(Wh, n); }
+      if (t === 'neck') return mul3(ny < 0.2 ? mix3(Wh, Gl, 0.3) : grizzle(x, y, z), n);
+      if (t === 'chest') return mul3(nx > 0.4 && ny < 0.2 ? mix3(Wh, Gl, 0.5) : grizzle(x, y, z), n);
+      if (ny < -0.45) return mul3(mix3(Gl, Gm, 0.35), n);
+      return mul3(t === 'back' ? mix3(grizzle(x, y, z), Gl, 0.18) : grizzle(x, y, z), n);
+    },
+  });
+  // the mouth: a pink inside under the snout, small teeth above, and the hinged lower jaw with its own
+  add(head, G.sphere, M.possumMouth, [0.085, -0.04, 0], [0.068, 0.014, 0.024], [0, 0, -0.16], false);
+  for (const s of [1, -1]) {
+    for (let i = 0; i < 4; i++) add(head, G.cone, M.tooth, [0.06 + i * 0.024, -0.043 - i * 0.004, 0.017 * s], [0.0045, 0.013, 0.0045], [0, 0, Math.PI], false);
+    add(head, G.cone, M.tooth, [0.135, -0.05, 0.011 * s], [0.006, 0.02, 0.006], [0, 0, Math.PI], false); // canines
+  }
+  add(jaw, G.sphere, M.possumJaw, [0.05, -0.008, 0], [0.06, 0.014, 0.024], [0, 0, -0.1]);
+  add(jaw, G.sphere, M.possumMouth, [0.045, 0.002, 0], [0.05, 0.008, 0.017], [0, 0, -0.1], false);
+  for (const s of [1, -1]) for (let i = 0; i < 3; i++) add(jaw, G.cone, M.tooth, [0.035 + i * 0.024, 0.006 - i * 0.003, 0.012 * s], [0.0042, 0.012, 0.0042], [0, 0, 0], false);
+  add(head, G.sphere, M.possumNose, [0.168, -0.034, 0], [0.019, 0.016, 0.021]);
+  eye(head, [0.046, 0.022, 0.043], 0.016, 0x050404); eye(head, [0.046, 0.022, -0.043], 0.016, 0x050404);
+  const ears = [];
+  for (const s of [1, -1]) {
+    const e = group(head, [-0.022, 0.058, 0.046 * s], [0.45 * s, 0.15 * s, 0.15]);
+    add(e, G.sphere, M.possumEarRim, [0, 0.002, -0.002 * s], [0.03, 0.033, 0.006]);
+    add(e, G.sphere, M.possumEar, [0.001, -0.001, 0.002 * s], [0.0285, 0.031, 0.007]);
+    ears.push(e);
+  }
+  whiskers(head, 0.14, -0.034, 0.02, 0.1);
+  const mouthPt = group(jaw, [0.06, 0.01, 0]); // where a snack goes in
+  const shadow = blobShadow(0.8); root.add(shadow);
+  const st = { yaw: faceAngle(-1), t: Math.random() * 10, ph: 0, mouth: 0, happy: 0 };
+  function update(dt, s) {
+    st.t += dt;
+    st.yaw = damp(st.yaw, faceAngle(s.facing), 7, dt); yaw.rotation.y = st.yaw;
+    const sp = Math.abs(s.walk || 0);
+    st.ph += dt * (2 + sp * 9);
+    const sw = Math.sin(st.ph) * Math.min(1, sp / 0.5) * 0.6;
+    legs[0].rotation.z = sw; legs[3].rotation.z = sw; legs[1].rotation.z = -sw; legs[2].rotation.z = -sw;
+    st.mouth = damp(st.mouth, s.mouth || 0, 18, dt);
+    st.happy = damp(st.happy, s.happy || 0, 4, dt);
+    const chew = s.chew > 0 ? Math.max(0, Math.sin(st.t * 15)) * 0.3 : 0;
+    jaw.rotation.z = -(st.mouth * 0.9 + chew);
+    const bounce = st.happy * Math.abs(Math.sin(st.t * 7)) * 0.025;
+    body.position.y = 0.235 + bounce + Math.sin(st.t * 2.3) * 0.004 + (sp > 0 ? Math.abs(Math.sin(st.ph)) * 0.01 : 0);
+    body.rotation.z = Math.sin(st.ph * 2) * 0.03 * Math.min(1, sp) + st.mouth * 0.08;
+    // sniffing about when calm; head up and back for the hiss; a happy little shake
+    head.rotation.z = st.mouth * 0.32 + (1 - st.mouth) * (Math.sin(st.t * 1.7) * 0.07 + Math.sin(st.t * 9) * 0.015) + st.happy * Math.sin(st.t * 6) * 0.06;
+    head.rotation.y = (1 - st.mouth) * Math.sin(st.t * 0.6) * 0.2;
+    tail.rotation.x = Math.sin(st.t * 1.3) * 0.15 + st.happy * Math.sin(st.t * 8) * 0.3;
+    tail3.rotation.z = -0.85 + Math.sin(st.t * 1.9) * 0.15;
+    for (const e of ears) e.rotation.z = 0.15 + st.happy * Math.sin(st.t * 9) * 0.12 + st.mouth * -0.2;
+  }
+  return { root, update, head, mouthPt };
+}
+
+// A snack for the possum: one of Peabody's minnows, or a little dog biscuit when he has none to share
+export function makeGift() {
+  M.biscuit ||= std(0xd9a066, { roughness: 0.75 });
+  const root = new THREE.Group();
+  const fish = makeMinnow(); fish.root.scale.setScalar(0.85); root.add(fish.root);
+  const biscuit = group(root);
+  add(biscuit, capsule(0.05, 0.15), M.biscuit, [0, 0, 0], 1, [0, 0, Math.PI / 2]);
+  for (const sx of [-0.1, 0.1]) for (const sy of [-0.045, 0.045]) add(biscuit, G.sphereLo, M.biscuit, [sx, sy, 0], 0.05);
+  return { root, fish: fish.root, biscuit };
+}
+
 // ───────────────────────── CHICKEN ─────────────────────────
 export function makeChicken() {
   const root = new THREE.Group();

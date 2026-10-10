@@ -59,6 +59,7 @@ On a touch screen the buttons sit in the bottom corners and the gesture tips sho
 | Boss: Tom the Giant Wild Turkey (10 HP; only its charge and landing quake hurt; it gets dizzy after hitting an arena wall, and dizzy hits do double damage) | `chars.js → makeTurkey()`, `game.js` boss state machine (`C.BOSS_HP`, `C.BOSS_SCALE`); arena in `world.js` (BOSS_TRIG 447, ARENA 445–466). The older boar model `makeBoar()` is kept for rollback |
 | Characters (Peabody, Morty, Jessica cutout, cats, gray fox, pigeons) | `src/chars.js`, `src/sculpt.js` |
 | Cat coats (14 variants) | `chars.js → CAT_VARIANTS` |
+| The possum, Peabody's friend (once per game, at `WORLD.POSSUM_X`: it hisses, he tosses it a minnow from his mouth, or a biscuit, and it eats in hearts) | `chars.js → makePossum()/makeGift()`, `game.js → updatePossum()/tossGift()`, `audio.js → sfx.possumHiss()/possumNom()` |
 | Level layout, buildings, platforms, enemy spawns | `src/world.js` |
 | Town geometry, facades, awnings, benches | `src/env.js` |
 | Shop names, real-store colors, sign styles, materials | `src/materials.js → SHOP_PROFILE` |

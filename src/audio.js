@@ -203,4 +203,8 @@ export const sfx = {
   bigFart() { tone(70, 0.9, 'sawtooth', 0.22, { to: 38, lp: 360 }); tone(110, 0.35, 'square', 0.08, { delay: 0.1, to: 60, lp: 300 }); noise(0.9, 0.18, { type: 'lowpass', freq: 260 }); },
   treat() { [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.12, 'triangle', 0.08, { delay: i * 0.05 })); noise(0.06, 0.05, { freq: 3000, q: 1, delay: 0.02 }); },
   trash() { noise(0.35, 0.15, { freq: 900, q: 0.5 }); tone(200, 0.2, 'square', 0.05, { to: 120, lp: 800 }); },
+  // the possum: a short, soft hiss with a few clicks (all bluff), then happy chomping and a little squeak
+  possumHiss() { noise(0.32, 0.05, { freq: 4300, q: 1.1 }); noise(0.22, 0.022, { freq: 7200, q: 2.2, delay: 0.04 }); for (const d of [0.38, 0.45, 0.53]) noise(0.014, 0.08, { freq: 2600, q: 5, delay: d }); },
+  toss() { tone(520, 0.1, 'triangle', 0.06, { to: 880 }); },
+  possumNom() { for (const d of [0, 0.17, 0.34]) { noise(0.035, 0.07, { type: 'lowpass', freq: 1400, delay: d }); tone(260, 0.05, 'triangle', 0.035, { delay: d, to: 190 }); } tone(1500, 0.09, 'sine', 0.04, { delay: 0.5, to: 2150 }); tone(1950, 0.08, 'sine', 0.03, { delay: 0.63, to: 2600 }); },
 };

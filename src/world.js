@@ -11,6 +11,8 @@ export const WORLD = {
   // park benches with friendly locals who share their food (plaza ones reuse the plaza benches)
   BENCH_X: [30, 112, 136, 196, 266, 290, 375, 411],
   TOWN_BENCH_X: [30, 112, 136, 196, 266, 290, 375, 411],
+  // the possum Peabody befriends, on the sidewalk a little before Fideaux Pets (no trash can, lamp or bench stands there)
+  POSSUM_X: 221.5, POSSUM_Z: -1.05,
 };
 export const ZONES = [
   { type: 'plaza', x0: 56, x1: 98 },

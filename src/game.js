@@ -1,7 +1,7 @@
 // Core gameplay — same rules as the classic, re-expressed in 3D units (1u = 50 classic px)
 import * as THREE from 'three';
 import { WORLD, TREATS, TREAT_PICKS, generateLayout, generateCollectibles, generateEnemies } from './world.js';
-import { makePeabody, makeCat, makePigeon, makeFox, makeRaccoon, makeChicken, makeMorty, makeJessica, makeWatermelon, makeMinnow, makeTrashCan, makeDogBed, makeCyclist, makeTurkey, makeBencher, makeFood } from './chars.js';
+import { makePeabody, makeCat, makePigeon, makeFox, makeRaccoon, makeChicken, makeMorty, makeJessica, makeWatermelon, makeMinnow, makeTrashCan, makeDogBed, makeCyclist, makeTurkey, makeBencher, makeFood, makePossum, makeGift } from './chars.js';
 import { input, clearJustPressed, keys, justPressed } from './input.js';
 const CHEAT = ['U', 'U', 'D', 'D', 'L', 'R', 'L', 'R']; // ↑ ↑ ↓ ↓ ← → ← → warps to the final quarter
 import { sfx, setMusic, restartMusic, setMusicRate, setMusicPaused } from './audio.js';
@@ -81,6 +81,10 @@ export class Game {
     for (const r of this.bikeRigs) { r.root.visible = false; scene.add(r.root); }
     this.shieldMesh = new THREE.Mesh(new THREE.SphereGeometry(0.85, 32, 16), new THREE.MeshBasicMaterial({ color: 0xffd34d, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
     this.shieldMesh.visible = false; scene.add(this.shieldMesh);
+    // the possum Peabody meets once along the way, and the snack he tosses it
+    this.possumRig = makePossum(); this.possumRig.root.scale.setScalar(1.6); this.possumRig.root.visible = false; scene.add(this.possumRig.root);
+    this.giftRig = makeGift(); this.giftRig.root.visible = false; scene.add(this.giftRig.root);
+    this._v1 = new THREE.Vector3(); this._v2 = new THREE.Vector3();
     this.reset();
   }
 
@@ -132,6 +136,9 @@ export class Game {
     this.shopSel = 0; this.petSel = 0;
     this.bikes = this.bikeRigs.map((rig, i) => ({ rig, trigX: WORLD.BIKE_X[i], active: false, done: false, x: 0, vx: 0, dir: 1, reacted: false, yelpT: 0, stinkT: 0 }));
     for (const r of this.bikeRigs) r.root.visible = false;
+    this.possum = { x: WORLD.POSSUM_X, z: WORLD.POSSUM_Z, state: 'wait', t: 0, facing: -1, mouth: 0, chew: 0, happy: 0, walk: 0 };
+    this.gift = { active: false, fish: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, t: 0, T: 0.62 };
+    this.possumRig.root.visible = false; this.giftRig.root.visible = false;
     this.fx.clear?.();
   }
 
@@ -364,6 +371,7 @@ export class Game {
       this.fx.burst(p.x, p.y + 0.5, 0, 0x9fe8ff, 30); this.addScore(100, c.foodX, 1.2, '#8fe3ff');
     }
     this.updateBenchers(dt);
+    this.updatePossum(dt);
     this.updateBoss(dt);
     // chicken
     if (this.chicken) this.updateChicken(dt);
@@ -607,6 +615,62 @@ export class Game {
     this.ui.flashFart?.();
     for (const e of this.enemies) if (e.alive && Math.abs(e.x - cx) < half) this.killEnemy(e, 200, 'GASSED');
     if (this.bossHittable() && Math.abs(this.boss.x - cx) < half) { this.boss.invT = 0; this.damageBoss(5, 'FART ATTACK!'); }
+  }
+
+  // ───────────────────────── the possum: a friend, once per game ─────────────────────────
+  // It waits on the sidewalk. When Peabody comes near it opens its mouth and hisses (a possum's bluff); he tosses it a
+  // snack from his mouth, one of his minnows if he has one to share (the count drops by one), else a biscuit; it eats
+  // happily, in hearts, and toddles off. About three seconds, and the game runs on through it: it is no enemy, nothing
+  // here can hurt him, and it scores nothing.
+  updatePossum(dt) {
+    const o = this.possum, p = this.p, g = this.gift;
+    if (o.state === 'gone') return;
+    o.t += dt;
+    if (o.state === 'wait') {
+      if (Math.abs(p.x - o.x) < 3.4 && p.y < 2.8) {
+        o.state = 'hiss'; o.t = 0; o.facing = Math.sign(p.x - o.x) || -1; o.mouth = 1;
+        sfx.possumHiss(); this.fx.text('hsss!', o.x + o.facing * 0.2, 1.05, o.z, '#f1e6ff', 0.75);
+      }
+    } else if (o.state === 'hiss') {
+      o.facing = Math.sign(p.x - o.x) || o.facing;
+      if (o.t > 0.5) { this.tossGift(); o.state = 'catch'; o.t = 0; }
+    } else if (o.state === 'catch') {
+      if (!g.active) { o.state = 'eat'; o.t = 0; o.mouth = 0; o.chew = 1.3; o.happy = 1; }
+    } else if (o.state === 'eat') {
+      o.chew = Math.max(0, o.chew - dt);
+      if (Math.random() < dt * 8) this.fx.heart(o.x + o.facing * 0.3, 0.8, o.z + 0.15);
+      if (o.t > 1.5) { o.state = 'happy'; o.t = 0; }
+    } else if (o.state === 'happy') {
+      if (o.t < 1.2 && Math.random() < dt * 3) this.fx.heart(o.x + o.facing * 0.3, 0.8, o.z + 0.15);
+      if (o.t > 1.4) { // off it toddles, back the way Peabody came, and is gone once out of sight
+        o.facing = -1; o.walk = 0.7; o.x -= 0.7 * dt; o.z = damp(o.z, -1.7, 1.5, dt); o.happy = 0;
+        if (Math.abs(o.x - this.camera.position.x) > (this.viewHalf || 12) + 3) { o.state = 'gone'; this.possumRig.root.visible = false; }
+      }
+    }
+    // the snack in the air: a small arc from his mouth into the possum's
+    if (g.active) {
+      g.t += dt; g.vy -= 14 * dt; g.x += g.vx * dt; g.y += g.vy * dt; g.z += g.vz * dt;
+      if (g.t >= g.T) {
+        g.active = false; this.giftRig.root.visible = false; sfx.possumNom();
+        this.fx.sparkle(o.x + o.facing * 0.3, 0.6, o.z, 0xffd6e8, 10, 1.5);
+        for (let i = 0; i < 3; i++) this.fx.heart(o.x + o.facing * 0.3, 0.9, o.z + 0.15);
+        this.fx.text('POSSUM PAL!', o.x, 1.6, o.z, '#ffb3d6', 0.95);
+      }
+    }
+  }
+  tossGift() {
+    const p = this.p, o = this.possum, g = this.gift;
+    if (Math.abs(p.vx) < 1 && p.grounded) p.facing = Math.sign(o.x - p.x) || p.facing; // standing, he turns to it
+    p.barkAnim = 0.3; // his mouth opens
+    const m = this.peabody.head.localToWorld(this._v1.set(0.21, -0.045, 0)); // the tip of his snout
+    const t = this.possumRig.mouthPt.getWorldPosition(this._v2);
+    g.fish = this.fishAvail > 0;
+    if (g.fish) { p.fishSpent++; this.fx.text('-1 MINNOW', p.x, p.y + 1.55, 0.3, '#8fd3ff', 0.7); }
+    Object.assign(g, { active: true, x: m.x, y: m.y, z: m.z, t: 0 });
+    g.vx = (t.x - m.x) / g.T; g.vz = (t.z - m.z) / g.T; g.vy = (t.y - m.y + 7 * g.T * g.T) / g.T;
+    this.giftRig.fish.visible = g.fish; this.giftRig.biscuit.visible = !g.fish;
+    this.giftRig.root.position.set(g.x, g.y, g.z); this.giftRig.root.visible = true;
+    sfx.toss();
   }
 
   // ───────────────────────── BOSS: Tom, the Giant Wild Turkey ─────────────────────────
@@ -1175,6 +1239,9 @@ export class Game {
     for (const f of this.foods) if (f.active) { f.rig.root.position.set(f.x, f.y, f.z || 0); f.rig.update(dt, f.landed); if (f.landed && Math.random() < dt * 5) this.fx.sparkle(f.x, f.y + 0.2, 0, 0xfff1a0, 1, 1); }
     // boss
     if (this.boarRig.root.visible) { const b = this.boss; this.boarRig.root.position.set(b.x, b.y, -0.15); this.boarRig.update(dt, b); }
+    // the possum and the snack in the air
+    { const o = this.possum, r = this.possumRig; const vis = o.state !== 'gone' && Math.abs(o.x - camX) < half + 2; r.root.visible = vis; if (vis) { r.root.position.set(o.x, 0, o.z); r.update(dt, o); } }
+    if (this.gift.active) { const g = this.gift, r = this.giftRig.root; r.position.set(g.x, g.y, g.z); r.rotation.y += dt * 6; r.rotation.z += dt * 9; }
     // Jessica
     this.jessRig.update(dt, this.jess);
     if (Math.abs(WORLD.JESS_X - camX) < 30 && Math.random() < dt * 0.8 && !this.jess.reached) this.fx.heart(WORLD.JESS_X, 2.7, -0.6);
@@ -1201,7 +1268,7 @@ export class Game {
       score: p.score, lives: p.lives, stamina: Math.round(p.stamina), combo: p.combo,
       melons: p.melons, fish: p.fish, fishAvail: this.fishAvail, catKills: p.catKills, pigeonKills: p.pigeonKills,
       powers: { kick: +p.kickT.toFixed(1), fart: +p.fartT.toFixed(1), bark: +p.barkT.toFixed(1), shake: +p.shakeT.toFixed(1), fly: +p.flyT.toFixed(1), morty: +p.mortyT.toFixed(1), pee: p.hasPee, jumpLvl: p.jumpLvl, speedLvl: p.speedLvl, sizeLvl: p.sizeLvl },
-      napping: p.napping, nearDoor: !!this.nearDoor, nearPet: !!this.nearPet, treats: p.treats, shield: p.shield, sky: +p.skyT.toFixed(1), dbl: +p.dblT.toFixed(1), boss: { state: this.boss.state, x: +this.boss.x.toFixed(1), hp: this.boss.hp }, puppy: +p.puppyT.toFixed(1), fsk: p.fskT > 0, bikes: this.bikes.map((b) => (b.active ? +b.x.toFixed(1) : b.done ? 'done' : 'waiting')), chicken: !!this.chicken, morty: this.morty.state,
+      napping: p.napping, nearDoor: !!this.nearDoor, nearPet: !!this.nearPet, treats: p.treats, shield: p.shield, sky: +p.skyT.toFixed(1), dbl: +p.dblT.toFixed(1), boss: { state: this.boss.state, x: +this.boss.x.toFixed(1), hp: this.boss.hp }, puppy: +p.puppyT.toFixed(1), fsk: p.fskT > 0, bikes: this.bikes.map((b) => (b.active ? +b.x.toFixed(1) : b.done ? 'done' : 'waiting')), chicken: !!this.chicken, morty: this.morty.state, possum: this.possum.state,
       enemiesNear: this.enemies.filter((e) => e.alive && Math.abs(e.x - p.x) < 10).map((e) => ({ t: e.type, x: +e.x.toFixed(1), y: +e.y.toFixed(1), frozen: e.frozenT > 0 })),
       itemsNear: this.items.filter((i) => !i.taken && Math.abs(i.x - p.x) < 8).length,
     });
