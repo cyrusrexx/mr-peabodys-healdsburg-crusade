@@ -1,7 +1,7 @@
 // Keyboard + touch input. Ported from the classic build, which was tuned to work
-// inside the Perplexity iframe (hidden input focus trap, listeners on canvas,
+// inside an embedding iframe (hidden input focus trap, listeners on canvas,
 // document and window) and on phones (no virtual keyboard popping up).
-// NOTE: Escape is intentionally never used — it exits the Perplexity viewer.
+// NOTE: Escape is intentionally never used — it exits the host's fullscreen/embed view.
 
 export const keys = {};
 export const justPressed = {};

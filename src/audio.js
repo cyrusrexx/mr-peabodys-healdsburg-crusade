@@ -1,4 +1,4 @@
-// Music (the custom Suno track) + richer procedural SFX through a small mixer
+// Music (the game's own track) + richer procedural SFX through a small mixer
 let ac = null, master = null, sfxBus = null, verb = null;
 export let muted = false;
 
@@ -95,7 +95,7 @@ export function toggleMute() {
   return muted;
 }
 // Leaving the page (tab switch, app background, navigation) stops the music; it comes back when you return.
-// NOTE: we deliberately do NOT pause on window 'blur' — inside the Perplexity frame focus hops around
+// NOTE: we deliberately do NOT pause on window 'blur' — inside an embedding frame focus hops around
 // (on-screen buttons, the keyboard trap, parent UI) and that used to cut the music out mid-run.
 // (Played through Web Audio on iPhone/iPad, its context is suspended with the page too, and woken when it comes back.)
 document.addEventListener('visibilitychange', () => {
