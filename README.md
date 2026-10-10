@@ -26,6 +26,7 @@ npm start            # serves dist/ at http://localhost:3000  (add ?debug for th
 3. **Never use Escape** for anything. It exits the host's fullscreen/embed view.
 4. **Music:** must play on Chrome mobile, never cut out mid-play, and stop when the user leaves the page (`visibilitychange` / `pagehide`). See `src/audio.js` (watchdog + resume logic). Don't pause on window `blur`; that caused the cutouts.
 5. On-screen touch controls must never open the virtual keyboard.
+6. **Nothing is stored in the browser:** no localStorage, sessionStorage, IndexedDB or cookies. The Top dogs board, the touch tips' count and the pause panel's settings last the visit, in memory.
 
 ## Controls
 

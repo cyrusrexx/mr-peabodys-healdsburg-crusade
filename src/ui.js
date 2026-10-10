@@ -4,13 +4,10 @@ import { sfx, toggleMute, muted } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 
-// ── leaderboard (persistent storage w/ in-memory fallback) ──
-const LB_KEY = 'peabody_leaderboard';
-const store = (() => {
-  try { const s = window['local' + 'Storage']; s.setItem('__t', '1'); s.removeItem('__t'); return s; } catch (e) { const m = {}; return { getItem: (k) => m[k] ?? null, setItem: (k, v) => { m[k] = String(v); } }; }
-})();
-export function loadBoard() { try { const b = JSON.parse(store.getItem(LB_KEY) || '[]'); return Array.isArray(b) ? b.slice(0, 5) : []; } catch (e) { return []; } }
-function saveBoard(b) { try { store.setItem(LB_KEY, JSON.stringify(b.slice(0, 5))); } catch (e) {} }
+// ── leaderboard: the visit's top dogs, kept in memory only (nothing is stored in the browser) ──
+let board = [];
+export function loadBoard() { return board.slice(0, 5); }
+function saveBoard(b) { board = b.slice(0, 5); }
 export function isHighScore(score) { const b = loadBoard(); return score > 0 && (b.length < 5 || score > b[b.length - 1].score); }
 function addToBoard(name, score) {
   const b = loadBoard(); const entry = { name, score, date: new Date().toISOString().slice(0, 10) };
@@ -53,6 +50,7 @@ export class UI {
     this.mode = 'loading';
     this.endReadyT = 0;
     this.initials = { letters: [0, 0, 0], cursor: 0, score: 0 };
+    this.gestRuns = 0; // runs the touch tips have shown in this visit
     this.buildStatic();
   }
 
@@ -86,10 +84,9 @@ export class UI {
     document.body.classList.remove('guide-open');
     if (mode === 'hud' && prev !== 'hud' && prev !== 'shop' && prev !== 'petshop') {
       const b = document.body;
-      // gesture cheat-sheet for the first few runs on touch devices
-      let n = 0; try { n = +(localStorage.getItem('pb_gest_hint') || 0); } catch (e) {}
-      if (b.classList.contains('touch') && n < 4) {
-        try { localStorage.setItem('pb_gest_hint', String(n + 1)); } catch (e) {}
+      // gesture cheat-sheet for the first couple of runs of a visit on touch devices
+      if (b.classList.contains('touch') && this.gestRuns < 2) {
+        this.gestRuns++;
         b.classList.remove('gest-on'); void b.offsetWidth; b.classList.add('gest-on');
         clearTimeout(this._gT); this._gT = setTimeout(() => b.classList.remove('gest-on'), 9000);
       }
