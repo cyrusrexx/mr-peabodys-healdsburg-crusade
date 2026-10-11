@@ -245,7 +245,7 @@ export class UI {
     $('ps-counter').querySelectorAll('.treat').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); const i = +el.dataset.i; g.petSel = i; this.renderPet(g); g.takeTreat(i); }));
   }
 
-  // ── Iggy's Burgers: Iggy at his counter, his three on cards as Fideaux Pets has its treats ──
+  // ── Iggy's Burgers: its grill cook at the counter, its three on cards as Fideaux Pets has its treats ──
   openShop(g) {
     this.show('shop'); this.renderShop(g);
     this.shopMsg(g.fishAvail >= 10 ? 'Hey Peabody! Fresh off the grill. Pay with minnows.' : "Hey Peabody! Short on minnows? The milkshake's on the house.");
