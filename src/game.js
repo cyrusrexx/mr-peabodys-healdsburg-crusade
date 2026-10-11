@@ -18,8 +18,9 @@ export const C = {
   // its speed): 60% at first (Cyrus, 10 Oct 2026: "Jumps are too extreme reduce the range to about 60% so the power ups
   // are actually useful. Maybe add a slider in pause menu for jump range"), 40% to 100% on the pause panel. In the
   // turkey's fight it is never less than the first jump (jumpSpeed). SIZE: a short power now, bigger for SIZE_T seconds
-  // and back ("He also gets too big when growing keep him more consistent size except for short periods of time")
-  JUMP_SCALE: 0.6, JUMP_MIN: 0.4, JUMP_MAX: 1, SIZE_T: 10, SIZE_BIG: 0.2,
+  // and back ("He also gets too big when growing keep him more consistent size except for short periods of time").
+  // JUMP UP: a boost for every POWER_EVERY melons, five at most (Cyrus, 11 Oct 2026: "cap jump up at 5")
+  JUMP_SCALE: 0.6, JUMP_MIN: 0.4, JUMP_MAX: 1, SIZE_T: 10, SIZE_BIG: 0.2, JUMP_LVL_MAX: 5,
   FSK_T: 0.42, FSK_V: 9.5, PUPPY_T: 10, PUPPY_BONUS: 3.2, BOSS_HP: 10, BOSS_SCALE: 3.0,
 };
 
@@ -805,7 +806,13 @@ export class Game {
       p.melons++; this.addScore(50, it.x, it.y + 0.4, '#ff7b8f');
       sfx.collectMelon(p.combo);
       this.fx.sparkle(it.x, it.y, 0, 0xff8fa0, 12);
-      if (p.melons % C.POWER_EVERY === 0) { p.jumpLvl++; sfx.powerUp(); this.popText('JUMP UP!', '#ff7b8f'); this.fx.ring(p.x, p.y + 0.5, 0.1, 0xff8fa0, 1.6, 0.4); }
+      // a boost up to the fifth (JUMP MAX! as it comes); at five, the melons say so and give no more
+      if (p.melons % C.POWER_EVERY === 0) {
+        if (p.jumpLvl < C.JUMP_LVL_MAX) {
+          p.jumpLvl++; sfx.powerUp(); this.popText(p.jumpLvl === C.JUMP_LVL_MAX ? 'JUMP MAX!' : 'JUMP UP!', '#ff7b8f');
+          this.fx.ring(p.x, p.y + 0.5, 0.1, 0xff8fa0, 1.6, 0.4);
+        } else this.popText('JUMP MAX', '#ff7b8f', 1);
+      }
     } else {
       p.fish++; p.stamina = Math.min(C.STAMINA_MAX, p.stamina + 30);
       this.addScore(30, it.x, it.y + 0.4, '#8fd3ff');
