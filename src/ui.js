@@ -2,6 +2,7 @@ import { WORLD, TREATS, TREAT_PICKS } from './world.js';
 import { input, clearJustPressed, justPressed, isTouchDevice } from './input.js';
 import { sfx, toggleMute, muted, setMusicLevel, getMusicLevel, musicOnOff } from './audio.js';
 import { SKILLS, C } from './game.js';
+import { SHOP_ART } from './shopart.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -244,21 +245,24 @@ export class UI {
     $('ps-counter').querySelectorAll('.treat').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); const i = +el.dataset.i; g.petSel = i; this.renderPet(g); g.takeTreat(i); }));
   }
 
-  // ── shop ──
-  openShop(g) { this.show('shop'); this.renderShop(g); this.shopMsg("Welcome to Iggy's! Pay with minnows."); }
+  // ── Iggy's Burgers: Iggy at his counter, his three on cards as Fideaux Pets has its treats ──
+  openShop(g) {
+    this.show('shop'); this.renderShop(g);
+    this.shopMsg(g.fishAvail >= 10 ? 'Hey Peabody! Fresh off the grill. Pay with minnows.' : "Hey Peabody! Short on minnows? The milkshake's on the house.");
+  }
   closeShop() { this.show('hud'); }
-  shopMsg(m) { $('shop-msg').textContent = m; }
-  renderShop(g) {
+  shopMsg(m) { const el = $('shop-msg'); el.textContent = m; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+  renderShop(g, justBought = -1) {
     $('shop-wallet').textContent = g.fishAvail;
-    const items = g.shopItems();
-    $('shop-items').innerHTML = items.map((it, i) => `
-      <button class="shop-item ${i === g.shopSel ? 'sel' : ''} ${(it.id === 'burger' && g.p.hasPee) ? 'owned' : ''} ${g.fishAvail < it.cost ? 'poor' : ''}" data-i="${i}">
-        <span class="si-ic">${ICON[it.id === 'burger' ? 'burger' : it.id]}</span>
-        <span class="si-tx"><b>${it.name}</b><small>${it.desc}</small></span>
-        <span class="si-cost">${it.cost ? `${it.cost} <em>${ICON.fish}</em>` : 'FREE'}</span>
-      </button>`).join('');
-    $('shop-items').querySelectorAll('.shop-item').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); g.shopSel = +el.dataset.i; g.buy(g.shopSel); }));
-    $('shop-items').querySelector('.sel')?.scrollIntoView({ block: 'nearest' }); // the list scrolls where the screen is short
+    $('shop-items').innerHTML = g.shopItems().map((it, i) => {
+      const owned = it.id === 'burger' && g.p.hasPee, poor = !owned && g.fishAvail < it.cost;
+      return `<button class="treat ${i === g.shopSel ? 'sel' : ''} ${owned ? 'taken' : ''} ${poor ? 'poor' : ''} ${i === justBought ? 'just' : ''}" data-i="${i}" style="--c:${it.col}">
+        <span class="ti">${SHOP_ART[it.id]}</span>
+        <span class="tag"><b>${it.name}</b><em>${it.power}</em><small>${it.desc}</small></span>
+        <span class="ribbon">${owned ? 'YOURS' : it.cost ? `${it.cost}<i>${ICON.fish}</i>` : 'FREE'}</span>
+      </button>`;
+    }).join('');
+    $('shop-items').querySelectorAll('.treat').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); g.shopSel = +el.dataset.i; g.buy(g.shopSel); }));
   }
 
   // ── end screens ──

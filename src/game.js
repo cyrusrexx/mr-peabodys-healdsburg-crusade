@@ -1147,9 +1147,9 @@ export class Game {
   }
   shopItems() {
     return [
-      { id: 'fries', name: 'Fries', cost: 10, desc: 'Bark blast for 15s — your chop also knocks out every pigeon nearby.' },
-      { id: 'burger', name: 'Iggy Burger', cost: 20, desc: this.p.hasPee ? 'Already yours — pee power is permanent!' : 'Permanent pee power. Press ↓ to leave a puddle that freezes cats.' },
-      { id: 'shake', name: 'Milkshake', cost: 0, desc: 'On the house! Speed boost for 10s.' },
+      { id: 'fries', name: 'Fries', cost: 10, power: `BARK · ${C.BARK_T}s`, col: '#e07a1f', desc: 'Your chop barks too, and knocks out every pigeon nearby.' },
+      { id: 'burger', name: 'Iggy Burger', cost: 20, power: 'PEE · FOREVER', col: '#2f8fd8', desc: this.p.hasPee ? 'Already yours: pee power is for good!' : 'Press ↓ to leave a puddle that freezes cats.' },
+      { id: 'shake', name: 'Milkshake', cost: 0, power: `SPEED · ${C.SHAKE_T}s`, col: '#e2588e', desc: 'On the house! A burst of speed.' },
     ];
   }
   buy(i) {
@@ -1160,13 +1160,15 @@ export class Game {
     if (it.id === 'fries') { p.barkT = C.BARK_T; this.ui.shopMsg('BARK POWER! Chop to bark.'); }
     if (it.id === 'burger') { p.hasPee = true; this.ui.shopMsg('PEE POWER unlocked forever!'); }
     if (it.id === 'shake') { p.shakeT = C.SHAKE_T; this.ui.shopMsg('Zoom zoom! Speed boost!'); }
-    this.ui.renderShop(this);
+    this.ui.renderShop(this, i);
   }
+  // the keys as at Fideaux Pets: ← → choose, Space (or Enter) buys, ↓ (or Backspace) leaves
   updateShop(dt) {
-    if (input.jumpPressed()) { this.shopSel = (this.shopSel + 2) % 3; sfx.ui(); this.ui.renderShop(this); }
-    if (input.downPressed()) { this.shopSel = (this.shopSel + 1) % 3; sfx.ui(); this.ui.renderShop(this); }
+    const n = this.shopItems().length;
+    if (input.leftPressed()) { this.shopSel = (this.shopSel + n - 1) % n; sfx.ui(); this.ui.renderShop(this); }
+    if (input.rightPressed()) { this.shopSel = (this.shopSel + 1) % n; sfx.ui(); this.ui.renderShop(this); }
     if (input.attackPressed() || justPressed.Enter) this.buy(this.shopSel);
-    if (input.leftPressed() || justPressed.Backspace) this.exitShop();
+    if (input.downPressed() || justPressed.Backspace) this.exitShop();
     this.updateWorldCritters(dt, true);
   }
 

@@ -95,7 +95,7 @@ footer a{color:inherit;text-decoration:none}
 body[data-mode="menu"] footer{display:block}
 
 /* ───────── HUD ───────── */
-body[data-mode="hud"] #hud, body[data-mode="shop"] #hud{display:block}
+body[data-mode="hud"] #hud{display:block}
 #hud{pointer-events:none}
 #hud *{pointer-events:none}
 #hud .track, #hud .track *{pointer-events:auto}
@@ -160,33 +160,19 @@ body.boss-on .track{transition:none}
 .ftext{position:absolute;left:0;top:0;font-family:var(--display);font-weight:700;white-space:nowrap;-webkit-text-stroke:4px rgba(60,25,10,.85);paint-order:stroke fill;text-shadow:0 3px 0 rgba(60,25,10,.6);will-change:transform,opacity}
 .ftext.big{font-size:34px;letter-spacing:.5px}
 
-/* ───────── shop ───────── */
-body[data-mode="shop"] #shop{display:flex}
-/* the card fits the screen as it is (a height in vh is Safari's tallest screen, its bars hidden, and on an iPhone a card
-   88vh tall ran off both ends, its title and EXIT out of reach); its head and foot always in view, only its items scroll */
-#shop{align-items:center;justify-content:flex-end;padding:6vh calc(5vw + var(--safe-r)) 6vh 0}
-.shop-card{width:min(470px,52vw);max-height:100%;display:flex;flex-direction:column;overflow:hidden;padding:18px 20px 16px;border-radius:26px;background:linear-gradient(180deg,#fffaf0,#fff0dc);box-shadow:var(--shadow),0 0 0 4px #d8342a;border:4px solid #fff}
-.shop-card h1{font-family:var(--display);font-weight:700;font-size:clamp(24px,3vw,38px);color:#d8342a;text-shadow:0 3px 0 #ffd34d;line-height:1}
-.shop-card .sub{display:flex;justify-content:space-between;align-items:center;margin:4px 0 12px;font-weight:800;font-size:13px;color:#7a2a0e}
-.wallet{display:flex;align-items:center;gap:5px;font-family:var(--display);font-size:18px;background:#fff;border-radius:99px;padding:2px 12px 2px 6px;box-shadow:0 2px 0 #e5cfb0}
-.wallet i{width:24px;height:24px}
-.shop-card>*{flex:none}
-#shop-items{display:flex;flex-direction:column;gap:8px;flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch;padding:5px 6px 7px;margin:-5px -6px 0}
-.shop-item{display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:center;text-align:left;background:#fff;border-radius:18px;padding:8px 12px;box-shadow:0 3px 0 #e5cfb0;border:3px solid transparent;transition:transform .12s,border-color .12s}
-.shop-item.sel{border-color:#ff7a3d;transform:scale(1.02);box-shadow:0 3px 0 #e5cfb0,0 0 0 4px rgba(255,122,61,.25)}
-.shop-item.poor .si-cost{color:#b9a48c}
-.shop-item.owned{opacity:.65}
-.si-ic svg{width:52px;height:52px}
-.si-tx b{font-family:var(--display);font-weight:700;font-size:18px;color:var(--ink);display:block}
-.si-tx small{font-family:var(--body);font-weight:700;font-size:12px;color:#7a5a44;line-height:1.3;display:block}
-.si-cost{font-family:var(--display);font-weight:700;font-size:18px;color:#d8342a;display:flex;align-items:center;gap:3px;white-space:nowrap}
-.si-cost em svg{width:22px;height:22px;vertical-align:middle}
-#shop-msg{margin:10px 2px 8px;min-height:1.3em;font-weight:800;color:#2f7a3a;font-size:14px}
-.shop-foot{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.shop-foot .keys{font-size:12px;font-weight:700;color:#7a5a44}
-body.touch .shop-foot .keys{display:none}
-body.touch #exit-shop{flex:1;font-size:17px;padding:12px 18px}
-#exit-shop{font-size:16px;font-weight:700;color:#fff;background:linear-gradient(180deg,#ff6b5a,#d8342a);padding:10px 18px;border-radius:99px;box-shadow:0 4px 0 #8a1a12;white-space:nowrap}
+/* ───────── Iggy's Burgers: Iggy at his counter, laid out as Fideaux Pets is (its rules below are both shops') ───────── */
+body[data-mode="shop"] #shop{display:block;pointer-events:auto}
+#shop{z-index:30;overflow:hidden;background:#5a1a12}
+#shop .ps-head h1{text-shadow:0 3px 0 #a8261e,0 8px 18px rgba(0,0,0,.4)}
+#shop-wallet-wrap{display:flex;align-items:center;gap:4px;font-family:var(--display);font-weight:600;font-size:clamp(12px,1.2vw,15px);color:#7a2a0e;background:#fffaf0;border-radius:99px;padding:3px 12px 3px 6px;box-shadow:0 3px 0 #e8b4a6}
+#shop-wallet-wrap i{display:flex;width:22px;height:22px} #shop-wallet-wrap i svg{width:100%;height:100%}
+#shop-wallet-wrap b{color:#d8342a}
+#shop .ps-bubble .who{color:#d8342a}
+#shop .treat .ti svg{width:100%;height:100%;display:block}
+#shop .treat .ribbon{display:flex;align-items:center;gap:2px}
+#shop .treat .ribbon i{display:flex;width:15px;height:15px} #shop .treat .ribbon i svg{width:100%;height:100%}
+#shop .treat.poor .ribbon{background:#9a8676;box-shadow:0 2px 0 #5e4e42}
+#exit-shop{font-size:15px;font-weight:700;color:#fff;background:linear-gradient(180deg,#ff6b5a,#d8342a);padding:9px 20px;border-radius:99px;box-shadow:0 4px 0 #8a1a12;white-space:nowrap;font-family:var(--display)}
 
 /* ───────── end + initials ───────── */
 body[data-mode="gameover"] #end, body[data-mode="victory"] #end{display:flex}
@@ -262,7 +248,6 @@ body.touch[data-mode="hud"] #touch-controls{display:block}
 .tbtn[data-action="right"]{left:calc(var(--tm) + var(--safe-l) + var(--tb) + var(--td) + var(--tg) * 2)}
 .tbtn[data-action="jump"]{right:calc(var(--tm) + var(--safe-r));bottom:calc(var(--tm) + var(--safe-b) + var(--tb) + 4px);background:rgba(120,200,255,.55)}
 .tbtn[data-action="attack"]{right:calc(var(--tm) + var(--safe-r) + var(--tb) + var(--tg) + 4px);background:rgba(255,140,90,.6)}
-body[data-mode="shop"] .tbtn[data-action="left"],body[data-mode="shop"] .tbtn[data-action="right"]{display:none}
 
 #fps{position:fixed;left:8px;bottom:6px;z-index:300;font:600 11px ui-monospace,monospace;color:#fff;background:rgba(0,0,0,.45);padding:2px 6px;border-radius:6px;display:none}
 #fps.on{display:block}
@@ -344,11 +329,6 @@ body[data-mode="loading"] #site-logo{display:none}
   #prompt{left:calc(var(--tm) + var(--safe-l) + var(--tb) * 2 + var(--td) + var(--tg) * 2 + 8px);right:calc(var(--tm) + var(--safe-r) + var(--tb) * 2 + var(--tg) + 12px);width:max-content;max-width:calc(100% - var(--tm) * 2 - var(--tb) * 4 - var(--td) - var(--tg) * 3 - 24px - var(--safe-l) - var(--safe-r));margin:0 auto;transform:translateY(10px);white-space:normal;text-align:center;font-size:13px;padding:6px 14px}
   #prompt.on{transform:none}
   .chip{font-size:10px;padding:2px 8px}
-  #shop{padding:calc(52px + var(--safe-t)) calc(68px + var(--safe-r)) calc(8px + var(--safe-b)) 0} /* clear of the sound button */
-  .shop-card{padding:10px 14px;width:56vw}
-  .shop-card h1{font-size:24px} .shop-card .sub{margin:2px 0 8px}
-  #shop-msg{margin:6px 2px 6px;font-size:13px} body.touch #exit-shop{font-size:15px;padding:8px 16px}
-  .shop-item{padding:5px 10px;grid-template-columns:40px 1fr auto} .si-ic svg{width:40px;height:40px} .si-tx small{font-size:10.5px}
   .end-card{padding:12px 16px} #end-stats{gap:5px;margin-bottom:8px} #end-sub{margin:4px 0 8px}
   #ini-slots{margin:8px 0 4px}
 }
@@ -365,8 +345,6 @@ body[data-mode="loading"] #site-logo{display:none}
   body.guide-open #guide-close{display:flex}
 }
 @media (max-width:760px) and (orientation:portrait){
-  #shop{justify-content:center;align-items:flex-end;padding:calc(58px + var(--safe-t)) calc(10px + var(--safe-r)) calc(10px + var(--safe-b)) calc(10px + var(--safe-l))}
-  .shop-card{width:100%;padding:14px 14px 12px}
   #menu .logo{left:0;right:0;margin:0 auto;width:92vw;text-align:center;top:calc(5vh + var(--safe-t))}
   .logo .pre{transform-origin:center}
   .logo .main{font-size:clamp(40px,12.5vw,64px)}
@@ -384,8 +362,9 @@ body[data-mode="loading"] #site-logo{display:none}
 /* ── Fideaux Pets: counter with free treats ── */
 body[data-mode="petshop"] #petshop{display:block;pointer-events:auto}
 #petshop{z-index:30;overflow:hidden;background:#3a2414}
-#petshop .ps-bg{position:absolute;inset:0;background:url('__PETSHOP__') center 34%/cover no-repeat;animation:psIn .55s cubic-bezier(.2,.9,.3,1)}
-#petshop .ps-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(30,15,5,.25),rgba(30,15,5,0) 22%,rgba(30,15,5,0) 52%,rgba(30,15,5,.45))}
+.ps-bg{position:absolute;inset:0;background:center 34%/cover no-repeat;animation:psIn .55s cubic-bezier(.2,.9,.3,1)}
+#petshop .ps-bg{background-image:url('__PETSHOP__')} #shop .ps-bg{background-image:url('__IGGYS__')}
+.ps-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(30,15,5,.25),rgba(30,15,5,0) 22%,rgba(30,15,5,0) 52%,rgba(30,15,5,.45))}
 @keyframes psIn{from{transform:scale(1.08);filter:brightness(1.4) blur(3px)}to{transform:none;filter:none}}
 .ps-head{position:absolute;left:calc(28px + var(--safe-l) + var(--logo));top:calc(14px + var(--safe-t));display:flex;flex-direction:column;align-items:flex-start;gap:6px}
 .ps-head h1{font-family:var(--display);font-weight:700;font-size:clamp(26px,3.4vw,46px);line-height:1;color:#fff;text-shadow:0 3px 0 #2f6b2a,0 8px 18px rgba(0,0,0,.4)}
@@ -395,10 +374,10 @@ body[data-mode="petshop"] #petshop{display:block;pointer-events:auto}
 .ps-bubble{position:absolute;left:61%;top:9%;width:min(330px,30vw);background:#fffaf0;border-radius:22px;padding:12px 16px 13px;box-shadow:0 6px 0 #d9c3a3,0 14px 30px rgba(40,20,5,.35);border:3px solid #fff}
 .ps-bubble::before{content:"";position:absolute;left:-16px;top:38px;border:12px solid transparent;border-right:18px solid #fffaf0;border-left:0}
 .ps-bubble .who{display:block;font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:1px;color:#3f8a3a;margin-bottom:2px}
-#ps-msg{font-weight:800;font-size:clamp(13px,1.25vw,16px);color:#5a2a10;line-height:1.3;display:block}
-#ps-msg.pop{animation:msgIn .28s ease-out}
+#ps-msg,#shop-msg{font-weight:800;font-size:clamp(13px,1.25vw,16px);color:#5a2a10;line-height:1.3;display:block}
+#ps-msg.pop,#shop-msg.pop{animation:msgIn .28s ease-out}
 @keyframes msgIn{from{opacity:.25;transform:translateY(5px)}}
-#ps-counter{position:absolute;left:0;right:0;bottom:calc(66px + var(--safe-b));display:flex;justify-content:center;align-items:flex-end;gap:clamp(8px,1.3vw,18px);padding:0 2vw}
+#ps-counter,#shop-items{position:absolute;left:0;right:0;bottom:calc(66px + var(--safe-b));display:flex;justify-content:center;align-items:flex-end;gap:clamp(8px,1.3vw,18px);padding:0 2vw}
 .treat{background:none;padding:0;position:relative;width:clamp(120px,15.5vw,196px);display:flex;flex-direction:column;align-items:center;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .treat .ti{width:clamp(70px,8.6vw,120px);aspect-ratio:1;display:block;filter:drop-shadow(0 12px 8px rgba(40,20,5,.5));transition:transform .22s cubic-bezier(.2,1.4,.4,1);position:relative;z-index:1}
 .treat .ti img{width:100%;height:100%;object-fit:contain;display:block}
@@ -419,18 +398,21 @@ body[data-mode="petshop"] #petshop{display:block;pointer-events:auto}
 body.phone .ps-foot .keys{display:none}
 #exit-pet{font-size:15px;font-weight:700;color:#fff;background:linear-gradient(180deg,#6fbf55,#3f8a3a);padding:9px 20px;border-radius:99px;box-shadow:0 4px 0 #1f5a1a;white-space:nowrap;font-family:var(--display)}
 @media (max-height:520px){
-  .ps-head h1{font-size:22px} #ps-left-wrap{font-size:11px;padding:2px 10px}
-  .ps-bubble{top:6%;left:52%;width:min(270px,35vw);padding:8px 12px;border-radius:16px} .ps-bubble::before{top:22px} .ps-bubble .who{font-size:11px} #ps-msg{font-size:12px}
-  #ps-counter{bottom:calc(46px + var(--safe-b));gap:6px}
+  .ps-head h1{font-size:22px} #ps-left-wrap{font-size:11px;padding:2px 10px} #shop-wallet-wrap{font-size:11px;padding:2px 10px 2px 4px} #shop-wallet-wrap i{width:16px;height:16px}
+  #shop .ps-bg{background-position:center 20%}
+  #shop .ps-bubble{left:60%;width:min(270px,calc(40% - 72px - var(--safe-r)))}
+  .ps-bubble{top:6%;left:52%;width:min(270px,35vw);padding:8px 12px;border-radius:16px} .ps-bubble::before{top:22px} .ps-bubble .who{font-size:11px} #ps-msg,#shop-msg{font-size:12px}
+  #ps-counter,#shop-items{bottom:calc(46px + var(--safe-b));gap:6px}
   .treat{width:min(18.5vw,150px)} .treat .ti{width:min(9vw,60px)} .treat .tag{padding:8px 6px 6px;border-radius:12px;gap:2px;margin-top:-6px}
   .treat .tag b{font-size:11px} .treat .tag em{font-size:9.5px;padding:1px 6px} .treat .tag small{font-size:9.5px;line-height:1.2}
   .treat .ribbon{font-size:9px;padding:1px 6px}
-  .ps-foot{bottom:calc(8px + var(--safe-b))} #exit-pet{font-size:13px;padding:6px 16px}
+  .ps-foot{bottom:calc(8px + var(--safe-b))} #exit-pet,#exit-shop{font-size:13px;padding:6px 16px}
 }
 @media (max-width:760px) and (orientation:portrait){
-  #petshop .ps-bg{background-position:52% 30%}
+  #petshop .ps-bg{background-position:52% 30%} #shop .ps-bg{background-position:50% 30%}
+  #shop .ps-bubble{bottom:calc(41vh + var(--safe-b))}
   .ps-bubble{left:auto;right:4vw;top:auto;bottom:calc(52vh + var(--safe-b));width:52vw} .ps-bubble::before{display:none}
-  #ps-counter{flex-wrap:wrap;gap:10px 8px;bottom:calc(64px + var(--safe-b))}
+  #ps-counter,#shop-items{flex-wrap:wrap;gap:10px 8px;bottom:calc(64px + var(--safe-b))}
   .treat{width:29vw} .treat .ti{width:15vw} .treat .tag small{display:none}
 }
 /* portrait phones (the game plays well held upright): the logo, the progress bar and sound share the top row; score
@@ -557,15 +539,13 @@ body.phone .ps-foot .keys{display:none}
   </div>
 </div>
 
-<!-- SHOP -->
+<!-- IGGY'S BURGERS -->
 <div id="shop" class="screen">
-  <div class="shop-card">
-    <h1>Iggy's Burgers</h1>
-    <div class="sub"><span>Fresh off the grill on the plaza</span><span class="wallet"><i data-icon="fish"></i><span id="shop-wallet">0</span></span></div>
-    <div id="shop-items"></div>
-    <div id="shop-msg"></div>
-    <div class="shop-foot"><span class="keys">↑↓ choose · Space buy · ← leave</span><button id="exit-shop">EXIT SHOP</button></div>
-  </div>
+  <div class="ps-bg"></div>
+  <div class="ps-head"><h1>Iggy's Burgers</h1><div id="shop-wallet-wrap"><i data-icon="fish"></i><b id="shop-wallet">0</b> minnows</div></div>
+  <div class="ps-bubble"><span class="who">IGGY · GRILL MASTER</span><span id="shop-msg"></span></div>
+  <div id="shop-items"></div>
+  <div class="ps-foot"><span class="keys">← → choose · Space buy · ↓ leave</span><button id="exit-shop">LEAVE SHOP</button></div>
 </div>
 
 <!-- FIDEAUX PETS -->
