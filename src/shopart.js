@@ -1,6 +1,6 @@
-// Iggy's three on their cards at the counter, drawn to go with art/iggys.mjs (the counter behind them): fries in his
-// red carton, the Iggy Burger, a strawberry milkshake. One of each is on screen at a time, so their gradients' ids are
-// their own.
+// Iggy's three on their cards at the counter: fries in a red carton, the Iggy Burger, a strawberry milkshake. Drawn
+// for the Iggy's first drawn in code (art/iggys.mjs, in the history at 104c585); the room is Cyrus's painting now
+// (assets/iggys.webp). One of each is on screen at a time, so their gradients' ids are their own.
 export const SHOP_ART = {
   fries: `<svg viewBox="0 0 120 120"><defs>
 <linearGradient id="igFry" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e09a12"/><stop offset=".45" stop-color="#ffdc5a"/><stop offset="1" stop-color="#e3a01a"/></linearGradient>
